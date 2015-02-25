@@ -1,4 +1,3 @@
-import time
 import serial
 import numpy
 import cv2
@@ -11,34 +10,42 @@ cam1.set(3, 480)
 cam1.set(4, 640)
 cam2.set(3, 480)
 cam2.set(4, 640)
-blank_image = np.zeros((960,1280,3), np.uint8)
+image = numpy.zeros((960,1280,3), numpy.uint8)
+MOTOR_HEADER_1 = 17
+MOTOR_HEADER_2 = 151
+EXPECTED_SENSOR_HEADER_1 = 74
+EXPECTED_SENSOR_HEADER_1 = 225
 
-while running:
-	time.sleep(5)
+# Returns the latest sensor values
+def readSensors():
+	while ser.inWaiting() >= 4:
+		sensorHeader1 = ser.read()
+		while sensorHeader1 != EXPECTED_SENSOR_HEADER_1 and ser.inWaiting() >= 3:
+			sensorHeader1 = ser.read()
+		sensorHeader2 = ser.read()
+		if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
+			sensor1 = ser.read()
+			sensor2 = ser.read()
+	return [sensor1, sensor2]
 
-	e = pygame.event.pump()
-	power = joy.get_axis(0)
-	running = joy.get_button(0)
-	direction = 0
-	if (power < 0):
-		direction = 2
-	else:
-		direction = 1
-	power = abs(power)
-	if power > 255:
-		power = 255
-	ser.write([0, power, direction])
+# Set the motor speeds based on the given directions
+def setMotors(xSpeed, ySpeed, zSpeed, rotation):
+	return
 
+# Return the latest image from the camera
+def getImage():
 	ret1, img1 = cam1.read()
 	ret2, img2 = cam2.read()
 	x_offset = 0
 	y_offset = 0
-	blank_image[y_offset:y_offset+image1.shape[0], x_offset:x_offset+image1.shape[1]] = image1
+	image[y_offset:y_offset+image1.shape[0], x_offset:x_offset+image1.shape[1]] = image1
 	x_offset = image1.shape[1]
-	blank_image[y_offset:y_offset+image2.shape[0], x_offset:x_offset+image2.shape[1]] = image2
-	
-	sensorData = ser.read()
+	image[y_offset:y_offset+image2.shape[0], x_offset:x_offset+image2.shape[1]] = image2
+	return image
 
-cam1.release()
-cam2.release()
-cv2.destroyAllWindows()
+# Release the cameras being used
+# Run once program ends
+def releaseCamera():
+	cam1.release()
+	cam2.release()
+	cv2.destroyAllWindows()
