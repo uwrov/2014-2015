@@ -3,8 +3,8 @@
 int motors = 6;
 int motorPortsD[motors] = {0, 1, 2, 3, 4, 5};
 int motorPortsP[motors] = {6, 7, 8, 9, 10, 11};
-String keyIn1 = 17;
-String keyIn2 = 151;
+String keyIn1 = 17; // 1st key for reading motor data
+String keyIn2 = 151; // 2nd key for reading motor data
 
 // Sensor ports and every sensor iteration to send
 // sensor value
@@ -12,8 +12,8 @@ String keyIn2 = 151;
 int sensorIteration = 1;
 int sensors = 6;
 int sensorPorts[sensors] = {0, 1, 2, 3, 4, 5};
-String keyOut1 = 74;
-String keyOut2 = 225;
+String keyOut1 = 74; // 1st key for sending sensor data
+String keyOut2 = 225; // 2nd key for sending sensor data
 
 // Counter for sensor iteration
 int counter = 0;
