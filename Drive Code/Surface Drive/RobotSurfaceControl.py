@@ -2,19 +2,24 @@ import serial
 import numpy
 import cv2
 
-ser = serial.Serial("COM5")
-
-cam1 = cv2.VideoCapture(0)
-cam2 = cv2.VideoCapture(1)
-cam1.set(3, 480)
-cam1.set(4, 640)
-cam2.set(3, 480)
-cam2.set(4, 640)
-image = numpy.zeros((960,1280,3), numpy.uint8)
+SERIAL_PORT = "COM5"
 MOTOR_HEADER_1 = 17
 MOTOR_HEADER_2 = 151
 EXPECTED_SENSOR_HEADER_1 = 74
-EXPECTED_SENSOR_HEADER_1 = 225
+EXPECTED_SENSOR_HEADER_2 = 225
+sensor1Name = 0
+sensor2Name = 1
+sensors = {sensor1Name : 0, sensor2Name : 0}
+IMAGE_SIZE = [480, 640]
+image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
+
+ser = serial.Serial(SERIAL_PORT)
+cam1 = cv2.VideoCapture(0)
+cam2 = cv2.VideoCapture(1)
+cam1.set(3, IMAGE_SIZE[0])
+cam1.set(4, IMAGE_SIZE[1])
+cam2.set(3, IMAGE_SIZE[0])
+cam2.set(4, IMAGE_SIZE[1])
 
 # Returns the latest sensor values
 def readSensors():
@@ -24,23 +29,21 @@ def readSensors():
 			sensorHeader1 = ser.read()
 		sensorHeader2 = ser.read()
 		if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
-			sensor1 = ser.read()
-			sensor2 = ser.read()
-	return [sensor1, sensor2]
+			sensorName = ser.read()
+			sensorValue = ser.read()
+			sensors[sensorName] = sensorValue
+	return [sensors[sensor1Name], sensors[sensor2Name]
 
 # Set the motor speeds based on the given directions
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
-	return
+	
 
 # Return the latest image from the camera
 def getImage():
 	ret1, img1 = cam1.read()
 	ret2, img2 = cam2.read()
-	x_offset = 0
-	y_offset = 0
-	image[y_offset:y_offset+image1.shape[0], x_offset:x_offset+image1.shape[1]] = image1
-	x_offset = image1.shape[1]
-	image[y_offset:y_offset+image2.shape[0], x_offset:x_offset+image2.shape[1]] = image2
+	image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
+	image[0 : IMAGE_SIZE[0], IMAGE_SIZE[1] : IMAGE_SIZE[1] * 2] = image2
 	return image
 
 # Release the cameras being used
