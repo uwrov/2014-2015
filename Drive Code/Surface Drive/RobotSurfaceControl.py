@@ -36,7 +36,7 @@ def readSensors():
 
 # Set the motor speeds based on the given directions
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
-	
+	return
 
 # Return the latest image from the camera
 def getImage():
