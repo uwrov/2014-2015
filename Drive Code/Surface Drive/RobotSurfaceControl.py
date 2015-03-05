@@ -37,7 +37,7 @@ def readSensors():
 			sensorName = ser.read()
 			sensorValue = ser.read()
 			sensors[sensorName] = sensorValue
-	return [sensors[sensor1Name], sensors[sensor2Name]
+	return [sensors[sensor1Name], sensors[sensor2Name]]
 
 # Set the motor speeds based on the given directions
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
