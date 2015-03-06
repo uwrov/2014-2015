@@ -67,14 +67,18 @@ def releaseCamera():
 	cam2.release()
 	cv2.destroyAllWindows()
 
+# Writes a special byte that should trigger the Arduino light
+# to turn on
 def testComm():
 	ser.write([HEADER_1, HEADER_2, 101, 0, 0])
-	return
 
+# Writes a special byte that should be returned by the Arduino. Returns
+# the time it took to receive
 def testPing():
 	startTime = clock()
 	ser.write([HEADER_1, HEADER_2, 102, 0, 0])
-	sleep(0.1)
+	while ser.inWaiting == 0:
+		wait(0.001)
 	while ser.inWaiting >= 4:
 		sensorHeader1 = ser.read()
 		while sensorHeader1 != EXPECTED_SENSOR_HEADER_1 and ser.inWaiting >= 3:
