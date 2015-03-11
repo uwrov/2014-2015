@@ -1,98 +1,129 @@
-#define delayCounter 5
+#define DELAY_COUNTER 5
 
 // Special LED packets
-const int keyLight = 101;
-const int ledPin = 13;
-boolean ledState = LOW;
+const int KEYLIGHT = 101;
+const int LEDPIN = 13;
+int ledState = LOW;
 
 // Special Ping packets
-const int keyPing = 102;
+const int KEYPING = 102;
 
 // Motor ports (D for direction and P for power)
 // Motor keys (first compare 1 then 2)
-#define motors 6
-int motorPortsD[motors] = {
+#define MOTORS 6
+int motorPortsD[MOTORS] = {
     1, 2, 3, 4, 5, 6
 };
-int motorPortsP[motors] = {
+int motorPortsP[MOTORS] = {
     7, 8, 9, 10, 11, 12
 };
-int motorPower[motors] = {
+int motorPower[MOTORS] = {
     0, 0, 0, 0, 0
-}; // from -256 to 256 (- being backward)
+};
+
+// from -256 to 256 (- being backward)
 int currentPower = 0;
 int changeRate = 8;
-int keyIn1 = 17; // 1st key for reading motor data
-int keyIn2 = 151; // 2nd key for reading motor data
 
+// 1st key for reading motor data
+int keyIn1 = 17;
+// 2nd key for reading motor data
+int keyIn2 = 151;
 
 // Sensor ports and every sensor iteration to send
 // sensor value
 // Sensor key values to be sent
-#define sensors 6
-int sensorIteration = 1;
-int sensorPorts[sensors] = {
+#define SENSORS 6
+int sensorIteration = 100000000;
+int sensorPorts[SENSORS] = {
     0, 1, 2, 3, 4, 5
 };
-int keyOut1 = 74; // 1st key for sending sensor data
-int keyOut2 = 225; // 2nd key for sending sensor data
+int keyOut1 = 74;
+
+// 1st key for sending sensor data
+int keyOut2 = 225;
+// 2nd key for sending sensor data
 
 // Counter for sensor iteration
 int counter = 0;
-
-
-
 // Initialize serial and output ports
+
 void setup() {
     Serial.begin(9600);
-    for (int i = 0; i < motors; i++) {
+    for (int i = 0; i < MOTORS; i++) {
         pinMode(motorPortsD[i], OUTPUT);
         pinMode(motorPortsP[i], OUTPUT);
     }
-    pinMode(ledPin, OUTPUT);
+    pinMode(LEDPIN, OUTPUT);
 }
 
-
-
 void loop() {
-    // read and turn motors from Serial port
+    // read and turn MOTORS from Serial port
     while (Serial.available() >= 5) {
-        if (Serial.read() == keyIn1 && Serial.read() == keyIn2) {
-            int specialKey = Serial.read();
-            if (specialKey == keyPing) {
-               Serial.write(keyPing);
-               int pingPkt = Serial.read();
-               Serial.write(pingPkt);
-               Serial.read();
-            } else if (specialKey == keyLight) {
-                // if the LED is off turn it on and vice-versa:
-                if (ledState == LOW) {
-                    ledState = HIGH;
-                } else {
-                    ledState = LOW;
-                }
-                // set the LED with the ledState of the variable:
-                digitalWrite(ledPin, ledState);
-            } else { 
-                int motorNum = Serial.read();
-                int motorP = Serial.read();
-                int motorD = Serial.read();
-                if (motorD > 0 && motorD < 3) {
-                    // stores the read motorP and motorD as the targetted
-                    // motor power (btw -256 and 256)
-                    if (motorD == 1) {
-                        motorPower[motorNum] = -1 * motorP;
-                    } else if (motorD == 2) {
-                        motorPower[motorNum] = motorP;
-                    }
-                }
-            }
+        readSerial();
+    }
+    motorControl();
+    sendSensorData();
+}
+
+void readSerial() {
+    if (Serial.read() == keyIn1 && Serial.read() == keyIn2) {
+        int specialKey = Serial.read();
+        if (specialKey == KEYPING) {
+            Serial.write(keyOut1);
+            Serial.write(keyOut2);
+            Serial.write(KEYPING);
+            Serial.write(Serial.read());
+            Serial.read();
+        }
+        else if (specialKey == KEYLIGHT) {
+            // if the LED is off turn it on and vice-versa:
+            ledState = !ledState;
+            // set the LED with the ledState of the variable:
+            digitalWrite(LEDPIN, ledState);
+        }
+        else {
+            readMotorValues();
         }
     }
-    
-    
-    for (int i = 0; i < motors; i++) {
-        // updates motor power to be midpoint btw current power and 
+}
+
+void sendSensorData() {
+    counter++;
+    // every sensorIteration iteration, reads and sends sensor
+    // reading
+    if (counter == sensorIteration) {
+        counter = 0;
+        for (int i = 0; i < SENSORS; i++) {
+            int sensorValue = analogRead(sensorPorts[i]);
+            Serial.write(keyOut1);
+            Serial.write(keyOut2);
+            Serial.write(i);
+            Serial.write(sensorValue);
+        }
+    }
+    delay(DELAY_COUNTER);
+}
+
+void readMotorValues() {
+    int motorNum = Serial.read();
+    int motorP = Serial.read();
+    int motorD = Serial.read();
+    if (motorD > 0 && motorD < 3) {
+        // stores the read motorP and motorD as the targetted
+        // motor power (btw -256 and 256)
+        if (motorD == 1) {
+            motorPower[motorNum] = -1 * motorP;
+        }
+        else if (motorD == 2) {
+            motorPower[motorNum] = motorP;
+        }
+    }
+}
+
+void motorControl() {
+    for (int i = 0; i < MOTORS; i++) {
+        // updates motor power to be midpoint btw current power and
         // targeted power
         currentPower += (motorPower[i] - currentPower) / changeRate;
         // convert back to motor readable output
@@ -104,21 +135,7 @@ void loop() {
         }
         analogWrite(motorPortsP[i], motorP);
         digitalWrite(motorPortsD[i], motorD);
-    } 
-    
-    
-    counter++;
-    // every sensorIteration iteration, reads and sends sensor
-    // reading
-    if (counter == sensorIteration) {
-        counter = 0;
-        for (int i = 0; i < sensors; i++) {
-            int sensorValue = analogRead(sensorPorts[i]);
-            Serial.write(keyOut1);
-            Serial.write(keyOut2);
-            Serial.write(i);
-            Serial.write(sensorValue);
-        }
     }
-    delay(delayCounter);
 }
+
+
