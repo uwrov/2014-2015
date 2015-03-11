@@ -2,11 +2,18 @@ from serial import Serial
 import numpy
 import cv2
 from time import clock, sleep
+import thread
 
 HEADER_1 = 17
 HEADER_2 = 151
 EXPECTED_SENSOR_HEADER_1 = 74
 EXPECTED_SENSOR_HEADER_2 = 225
+COMM_KEY = 101
+PING_KEY = 102
+pingStartTime = 0
+pingTime = -1
+ser = None
+
 sensor1Name = 0
 sensor2Name = 1
 sensors = {sensor1Name : 0, sensor2Name : 0}
@@ -14,48 +21,99 @@ sensors = {sensor1Name : 0, sensor2Name : 0}
 IMAGE_SIZE = [480, 640]
 image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
 
-# Set up serial communication and cameras
+# Updates the sensor data from the Arduino. Runs on a separate thread
+# after setup runs
+def updateData():
+	global pingTime
+	global pingStartTime
+	while True:
+		sleep(0.1)
+		# Packets should be received in sets of 4
+		while ser.inWaiting() > 0:
+			sensorHeader1 = readByte(ser)
+			while sensorHeader1 != EXPECTED_SENSOR_HEADER_1:
+				sensorHeader1 = ser.read()
+			sensorHeader2 = readByte(ser)
+			if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
+				sensorName = readByte(ser)
+				sensorValue = readByte(ser)
+				# Check if ping sent back
+				if sensorName == PING_KEY:
+					pingEndTime = clock()
+					pingTime = pingEndTime - pingStartTime
+				else:
+					sensors[sensorName] = sensorValue
+
+# Set up serial communication and cameras, and start data reading thread
 # Run once program begins
 def setup(serialPort):
+	global ser
 	ser = Serial(serialPort)
+	if ser == None:
+		print "Did not connect"
 	cam1 = cv2.VideoCapture(0)
 	cam2 = cv2.VideoCapture(1)
 	cam1.set(3, IMAGE_SIZE[0])
 	cam1.set(4, IMAGE_SIZE[1])
 	cam2.set(3, IMAGE_SIZE[0])
 	cam2.set(4, IMAGE_SIZE[1])
+	thread.start_new_thread(updateData, ())
+	# Start the clock, used for ping times
 	clock()
 
 # Return the latest sensor values
 def readSensors():
-	while ser.inWaiting() >= 4:
-		sensorHeader1 = ser.read()
-		while sensorHeader1 != EXPECTED_SENSOR_HEADER_1 and ser.inWaiting() >= 3:
-			sensorHeader1 = ser.read()
-		sensorHeader2 = ser.read()
-		if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
-			sensorName = ser.read()
-			sensorValue = ser.read()
-			sensors[sensorName] = sensorValue
 	return [sensors[sensor1Name], sensors[sensor2Name]]
 
 # Set the motor speeds based on the given directions
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
-	direction = 0
-	if zSpeed < 0:
-		direction = 1
+	zPow, zDir = setZ(zSpeed)
+	clockPow, clockDir = setClockwiseMotors(xSpeed, ySpeed, rotation)
+	counterPow, counterDir = setCounterClockwiseMotors(xSpeed, ySpeed, rotation)
+	# Set new variables opposite direction of original
+	oppClockDir = 0
+	if clockDir == 1:
+		oppClockDir = 2
 	else:
-		direction = 2
-	zSpeed = abs(zSpeed)
-	if zSpeed > 255:
-		zSpeed = 255
-	ser.write([HEADER_1, HEADER_2, 4, zSpeed, direction])
-	ser.write([HEADER_1, HEADER_2, 5, zSpeed, direction])
+		oppClockDir = 1
+	oppCounterDir = 0
+	if counterDir == 1:
+		oppCounterDir = 2
+	else:
+		oppCounterDir = 1
+	ser.write([HEADER_1, HEADER_2, 0, clockPow, clockDir])
+	ser.write([HEADER_1, HEADER_2, 1, counterPow, counterDir])
+	ser.write([HEADER_1, HEADER_2, 2, clockPow, oppClockDir])
+	ser.write([HEADER_1, HEADER_2, 3, counterPow, oppCounterDir])
+	ser.write([HEADER_1, HEADER_2, 4, zPow, zDir])
+	ser.write([HEADER_1, HEADER_2, 5, zPow, zDir])
+
+def setZ(zSpeed):
+	zDir = 0
+	# direction: 2 is forward, 1 is backward
+	if zSpeed < 0:
+		zDir = 1
+	else:
+		zDir = 2
+	zPow = abs(zSpeed)
+	# Speed cannot be greater than 255
+	if zPow > 255:
+		zPow = 255
+	return [zPow, zDir]
+
+def setClockwiseMotors(xSpeed, ySpeed, rotation):
+	# Add code
+	return [0, 0]
+
+def setCounterClockwiseMotors(xSpeed, ySpeed, rotation):
+	# Add more code
+	return [0, 0]
 
 # Return the latest image from the camera
 def getImage():
 	ret1, img1 = cam1.read()
 	ret2, img2 = cam2.read()
+	# Add images to blank image, puts 2 images onto 1 frame
 	image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
 	image[0 : IMAGE_SIZE[0], IMAGE_SIZE[1] : IMAGE_SIZE[1] * 2] = image2
 	return image
@@ -68,26 +126,19 @@ def releaseCamera():
 	cv2.destroyAllWindows()
 
 # Writes a special byte that should trigger the Arduino light
-# to turn on
+# to turn on. Use to test communication with the Arduino
 def testComm():
-	ser.write([HEADER_1, HEADER_2, 101, 0, 0])
+	# Zeros are garbage data
+	ser.write([HEADER_1, HEADER_2, COMM_KEY, 0, 0])
 
-# Writes a special byte that should be returned by the Arduino. Returns
-# the time it took to receive
+# Writes a special byte that should be returned by the Arduino.
+# Use to test ping times to the Arduino
 def testPing():
-	startTime = clock()
-	ser.write([HEADER_1, HEADER_2, 102, 0, 0])
-	while ser.inWaiting == 0:
-		wait(0.001)
-	while ser.inWaiting >= 4:
-		sensorHeader1 = ser.read()
-		while sensorHeader1 != EXPECTED_SENSOR_HEADER_1 and ser.inWaiting >= 3:
-			sensorHeader1 = ser.read()
-		sensorHeader2 = ser.read()
-		if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
-			key = ser.read()
-			if key == 102:
-				endTime = clock()
-				totalTime = endTime - startTime
-				return totalTime
-	return -1
+	# Zeros are garbage data
+	ser.write([HEADER_1, HEADER_2, PING_KEY, 5, 0])
+
+def getPing():
+	return pingTime
+
+def readByte(ser):
+	return ord(ser.read())
