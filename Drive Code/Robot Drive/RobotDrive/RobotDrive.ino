@@ -1,5 +1,9 @@
 #define DELAY_COUNTER 5
 
+// old compass value
+int oldCompass = 0;
+
+// pneumatics port and key
 int pneumaticsPort = 1;
 const int KEYPNEUMATICS = 100;
 
@@ -85,7 +89,7 @@ void readSerial() {
             ledState = !ledState;
             // set the LED with the ledState of the variable:
             digitalWrite(LEDPIN, ledState);
-        } else if (specialKey == KEYPNUEUMATICS) {
+        } else if (specialKey == KEYPNEUMATICS) {
             // if the Pneumatics claw is off turn it on and vice-versa:
             ledState = !ledState;
             // set the Pneumatics claw with the ledState of the variable:
@@ -142,9 +146,50 @@ void motorControl() {
             motorD = 0;
             motorP = -1 * currentPower;
         }
+        oldCompass = readCompass();
         analogWrite(motorPortsP[i], motorP);
         digitalWrite(motorPortsD[i], motorD);
     }
 }
 
+// stability control through reading of compass and adjusting motor
+// powers based on the different in angle ans compared to previous
+void adjustAngle() {
+  int newCompass = readCompass();
+  int diffAngle = newCompass - oldCompass;
+  // if diffAngle > 0, rotate left if diffAngle < 0, rotate right 
+  if (diffAngle < 0) { // normally rotate right
+    if (diffAngle < -128) { // rotating left would be more efficient
+      rotateLeft(-1 * diffAngle);
+    } else {
+      rotateRight(-1 * diffAngle);
+    }  
+} else if (diffAngle > 0) { // new > old, rotate left normally
+      if (diffAngle > 128) { // rotate right is more efficient
+        rotateRight(diffAngle);
+      } else {
+        rotateLeft(diffAngle);
+      }
+  }
+}
 
+// reads compass value, return a value between 0 and 255
+int readCompass() {
+  return 0;
+}
+
+// rotates left a certain amount
+void rotateLeft(int amount) {
+  motorPower[0] += amount / 4;
+  motorPower[1] -= amount / 4;
+  motorPower[2] += amount / 4;
+  motorPower[3] -= amount / 4;
+}
+
+// rotates right a certain amount
+void rotateRight(int amount) {
+  motorPower[0] -= amount / 4;
+  motorPower[1] += amount / 4;
+  motorPower[2] -= amount / 4;
+  motorPower[3] += amount / 4;
+}
