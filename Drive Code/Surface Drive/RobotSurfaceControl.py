@@ -19,11 +19,6 @@ ser = None
 pingTime = -1
 pingStartTime = 0
 
-# Angle of the motors from the x-axis
-X_ANGLE = (math.pi)/3
-# Angle of the motors from y-axis
-Y_ANGLE = (math.pi)/6
-
 # Sensors
 sensor1Name = 0
 sensor2Name = 1
@@ -47,6 +42,7 @@ image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
 # Updates the sensor data and ping time from the Arduino. Runs on
 # a separate thread after setup runs
 def updateData():
+	global sensors
 	global pingTime
 	global pingStartTime
 	while True:
@@ -55,7 +51,7 @@ def updateData():
 		while ser.inWaiting() > 0:
 			sensorHeader1 = readByte(ser)
 			while sensorHeader1 != EXPECTED_SENSOR_HEADER_1:
-				sensorHeader1 = ser.read()
+				sensorHeader1 = readByte(ser)
 			sensorHeader2 = readByte(ser)
 			if sensorHeader2 == EXPECTED_SENSOR_HEADER_2:
 				sensorName = readByte(ser)
@@ -83,26 +79,17 @@ def setup(serialPort):
 	cam2.set(4, IMAGE_SIZE[1])
 	start_new_thread(updateData, ())
 
-# Return the latest sensor values
-def readSensors():
-	return [sensors[sensor1Name], sensors[sensor2Name]]
-
 # Set the motor speeds based on the given speeds
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	zPow, zDir = setZ(zSpeed)
-	clockPow, counterPow = setMotorTranslate(xSpeed, ySpeed, rotation)
+	clockPow, counterPow = setMotorTranslate(xSpeed, ySpeed)
+	clockPow -= 0.5 * rotation
+	counterPow += 0.5 * rotation
+	clockDir, oppClockDir = setMotorDir(clockPow)
+	clockPow = abs(clockPow)
+	counterDir, oppCounterDir = setMotorDir(counterPow)
+	counterPow = abs(counterPow)
 	normClockPow, normCounterPow = normalize(clockPow, counterPow)
-	# Set new variables opposite direction of original
-	oppClockDir = 0
-	if clockDir == 1:
-		oppClockDir = 2
-	else:
-		oppClockDir = 1
-	oppCounterDir = 0
-	if counterDir == 1:
-		oppCounterDir = 2
-	else:
-		oppCounterDir = 1
 	# Write motor values to the Arduino
 	ser.write([HEADER_1, HEADER_2, 0, clockPow, clockDir])
 	ser.write([HEADER_1, HEADER_2, 1, counterPow, counterDir])
@@ -119,24 +106,23 @@ def setZ(zSpeed):
 	else:
 		zDir = 2
 	zPow = abs(zSpeed) * 255
-	# Speed cannot be greater than 255
-	if zPow > 255:
-		zPow = 255
 	return [zPow, zDir]
 
-def setClockwiseMotors(xSpeed, ySpeed):
-	m1 = .5 * xSpeed + ySpeed / (2 * math.sqrt(3));
-    m2 = -.5 * x + y / (2 * math.sqrt(3));
-    m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1);
-    m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(xSpeed, ySpeed), 1);
-	return [0, 0]
+def setMotorTranslate(xSpeed, ySpeed):
+	m1 = .5 * xSpeed + ySpeed / (2 * math.sqrt(3))
+	m2 = -.5 * xSpeed + ySpeed / (2 * math.sqrt(3))
+	return [m1, m2]
 
-def setCounterClockwiseMotors(xSpeed, ySpeed):
-	m1 = .5 * x + y / (2 * math.sqrt(3));
-    m2 = -.5 * x + y / (2 * math.sqrt(3));
-    m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(x, y), 1);
-    m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(x, y), 1);
-	return [0, 0]
+def setMotorDir(power):
+	direction = 0
+	oppDirection = 0
+	if power < 0:
+		direction = 1
+		oppDirection = 2
+	else:
+		direction = 2
+		oppDirection = 1
+	return [direction, oppDirection]
 
 def normalize(clockPow, counterPow):
 	normClockPow = 0
