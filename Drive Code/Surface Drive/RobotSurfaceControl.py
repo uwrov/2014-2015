@@ -10,6 +10,7 @@ HEADER_1 = 17
 HEADER_2 = 151
 EXPECTED_SENSOR_HEADER_1 = 74
 EXPECTED_SENSOR_HEADER_2 = 225
+PNEUMATIC_KEY = 100
 COMM_KEY = 101
 PING_KEY = 102
 
@@ -33,10 +34,15 @@ IMAGE_SIZE = [480, 640]
 image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
 
 # THE BOT
-#  /___\
-#  |   |
-#  |___|
-#  \   /
+#
+#     FRONT
+#
+#  1 /_____\ 2
+#    |     |
+#    |  5  |
+#    |  6  |
+#    |_____|
+#  4 \     / 3
 
 # Updates the sensor data and ping time from the Arduino. Runs on
 # a separate thread after setup runs
@@ -84,8 +90,8 @@ def readSensors():
 # Set the motor speeds based on the given speeds
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	zPow, zDir = setZ(zSpeed)
-	clockPow, clockDir = setClockwiseMotors(xSpeed, ySpeed, rotation)
-	counterPow, counterDir = setCounterClockwiseMotors(xSpeed, ySpeed, rotation)
+	clockPow, counterPow = setMotorTranslate(xSpeed, ySpeed, rotation)
+	normClockPow, normCounterPow = normalize(clockPow, counterPow)
 	# Set new variables opposite direction of original
 	oppClockDir = 0
 	if clockDir == 1:
@@ -112,19 +118,49 @@ def setZ(zSpeed):
 		zDir = 1
 	else:
 		zDir = 2
-	zPow = abs(zSpeed)
+	zPow = abs(zSpeed) * 255
 	# Speed cannot be greater than 255
 	if zPow > 255:
 		zPow = 255
 	return [zPow, zDir]
 
-def setClockwiseMotors(xSpeed, ySpeed, rotation):
-	# Add code
+def setClockwiseMotors(xSpeed, ySpeed):
+	m1 = .5 * xSpeed + ySpeed / (2 * math.sqrt(3));
+    m2 = -.5 * x + y / (2 * math.sqrt(3));
+    m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1);
+    m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(xSpeed, ySpeed), 1);
 	return [0, 0]
 
-def setCounterClockwiseMotors(xSpeed, ySpeed, rotation):
-	# Add more code
+def setCounterClockwiseMotors(xSpeed, ySpeed):
+	m1 = .5 * x + y / (2 * math.sqrt(3));
+    m2 = -.5 * x + y / (2 * math.sqrt(3));
+    m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(x, y), 1);
+    m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(x, y), 1);
 	return [0, 0]
+
+def normalize(clockPow, counterPow):
+	normClockPow = 0
+	normCounterPow = 0
+	if clockPow > 1 and counterPow > 1:
+		if clockPow > counterPow:
+			normCounterPow = counterPow / clockPow
+			normClockPow = 1
+		else:
+			normClockPow = clockPow / counterPow
+			normCounterPow = 1
+	elif clockPow > 1:
+		normCounterPow = counterPow / clockPow
+		normClockPow = 1
+	elif counterPow > 1:
+		normClockPow = clockPow / counterPow
+		normCounterPow = 1
+	else:
+		normClockPow = clockPow
+		normCounterPow = counterPow
+	return [normClockPow, normCounterPow]
+
+def moveClaw():
+	ser.write([HEADER_1, HEADER_2, PNEUMATIC_KEY, 0, 0])
 
 # Return the latest image from the camera
 def getImage():
