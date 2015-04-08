@@ -1,5 +1,8 @@
 #define DELAY_COUNTER 5
 
+int pneumaticsPort = 1;
+const int KEYPNEUMATICS = 100;
+
 // Special LED packets
 const int KEYLIGHT = 101;
 const int LEDPIN = 13;
@@ -11,10 +14,10 @@ const int KEYPING = 102;
 // Motor ports (D for direction and P for power)
 // Motor keys (first compare 1 then 2)
 #define MOTORS 6
-int motorPortsD[MOTORS] = {
+const int motorPortsD[MOTORS] = {
     1, 2, 3, 4, 5, 6
 };
-int motorPortsP[MOTORS] = {
+const int motorPortsP[MOTORS] = {
     7, 8, 9, 10, 11, 12
 };
 int motorPower[MOTORS] = {
@@ -35,11 +38,11 @@ int keyIn2 = 151;
 // Sensor key values to be sent
 #define SENSORS 6
 int sensorIteration = 100000000;
-int sensorPorts[SENSORS] = {
+const int sensorPorts[SENSORS] = {
     0, 1, 2, 3, 4, 5
 };
-int keyOut1 = 74;
 
+int keyOut1 = 74;
 // 1st key for sending sensor data
 int keyOut2 = 225;
 // 2nd key for sending sensor data
@@ -54,6 +57,7 @@ void setup() {
         pinMode(motorPortsD[i], OUTPUT);
         pinMode(motorPortsP[i], OUTPUT);
     }
+    pinMode(pneumaticsPort, OUTPUT);
     pinMode(LEDPIN, OUTPUT);
 }
 
@@ -81,6 +85,11 @@ void readSerial() {
             ledState = !ledState;
             // set the LED with the ledState of the variable:
             digitalWrite(LEDPIN, ledState);
+        } else if (specialKey == KEYPNUEUMATICS) {
+            // if the Pneumatics claw is off turn it on and vice-versa:
+            ledState = !ledState;
+            // set the Pneumatics claw with the ledState of the variable:
+            digitalWrite(pneumaticsPort, ledState);
         }
         else {
             readMotorValues();
