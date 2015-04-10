@@ -72,7 +72,7 @@ const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
 
 // misc constants
 
-const int ACCELERATION = 8; // how fast motors change speed
+const int ACCELERATION = 8; // how fast motors change speed, lower means faster change
 const int SENSOR_ITERATION = 100000000;
 
 
@@ -154,48 +154,56 @@ void readSerial() {
 
 void readMotorValues() {
     int motorNum = Serial.read();
-    int motorP = Serial.read();
-    int motorD = Serial.read();
+    int motorPow = Serial.read();
+    int motorDir = Serial.read();
 
-    if (motorD == READ_FORWARD || motorD == READ_BACKWARD) {
-        // stores the read motorP and motorD as the targetted
-        // motor power [-255, 255]
-        if (motorD == READ_BACKWARD) {
-            motorPower[motorNum] = -1 * motorP;
-        }
-        else if (motorD == READ_FORWARD) {
-            motorPower[motorNum] = motorP;
-        }
+    // stores the read motorPow and motorDir as the targetted motor power [-255, 255]
+    if (motorDir == READ_BACKWARD) {
+        motorPower[motorNum] = -1 * motorPow;
+    }
+    else if (motorDir == READ_FORWARD) {
+        motorPower[motorNum] = motorPow;
     }
 }
 
 
 // adjust motor power and direction to desired values
 void motorControl() {
-    for (int i = 0; i < NUM_MOTORS; i++) {
-        // updates motor power to be midpoint btw current power and targeted power
-        currentPower[i] += (motorPower[i] - currentPower[i]) / ACCELERATION;
+    if (hold) adjustAngle();
 
-        if (hold) {
-            adjustAngle();
-        }
+    for (int i = 0; i < NUM_MOTORS; i++) {
+        // updates motor power in the direction of desired power
+        currentPower[i] = getNewPower(i);
 
         // convert back to motor readable output
-        int motorD = FORWARD;
-        int motorP = currentPower[i];
-        if (motorP < 0) {
-            motorD = BACKWARD;
-            motorP *= -1;
+        int motorDir = FORWARD;
+        int motorPow = currentPower[i];
+        if (motorPow < 0) {
+            motorDir = BACKWARD;
+            motorPow *= -1;
         }
 
-        analogWrite(MOTOR_POW_PORTS[i], motorP);
-        digitalWrite(MOTOR_DIR_PORTS[i], motorD);
+        analogWrite(MOTOR_POW_PORTS[i], motorPow);
+        digitalWrite(MOTOR_DIR_PORTS[i], motorDir);
     }
 }
 
 
+// returns the new power based off the old power for the given motor
+int getNewPower(int motorNum) {
+    int delta = motorPower[motorNum] - currentPower[motorNum];
+
+    if (delta == 0) return currentPower[motorNum];
+
+    int v = delta / ACCELERATION;
+    if (v == 0) return currentPower[motorNum] + abs(delta) / delta;
+
+    return min(max(currentPower[motorNum] + v, 0), 255);
+}
+
+
 void sendSensorData() {
-    // every SENSOR_ITERATION iteration, reads and sends sensor reading
+    // every SENSOR_ITERATION iterations, reads and sends sensor reading
     if (++sensorLoopCounter == SENSOR_ITERATION) {
         sensorLoopCounter = 0;
 
@@ -211,7 +219,7 @@ void sendSensorData() {
 
 
 // stability control through reading of compass and adjusting motor powers based on the different in
-// angle ans compared to previous
+// angle as compared to previous
 void adjustAngle() {
     int newCompass = readCompass();
     int diffAngle = (desiredCompass - newCompass + 256) % 256;
@@ -230,19 +238,19 @@ int readCompass() {
 
 // rotates left a certain amount
 void rotateLeft(int amount) {
-    currentPower[MOTOR_FT_LT] += amount / 4;
-    currentPower[MOTOR_FT_RT] -= amount / 4;
-    currentPower[MOTOR_BK_RT] += amount / 4;
-    currentPower[MOTOR_BK_LT] -= amount / 4;
+    motorPower[MOTOR_FT_LT] += amount / 4;
+    motorPower[MOTOR_FT_RT] -= amount / 4;
+    motorPower[MOTOR_BK_RT] += amount / 4;
+    motorPower[MOTOR_BK_LT] -= amount / 4;
     
-    int max_ft = max(currentPower[MOTOR_FT_LT], currentPower[MOTOR_FT_RT]);
-    int max_bk = max(currentPower[MOTOR_BK_RT], currentPower[MOTOR_BK_LT]);
+    int max_ft = max(motorPower[MOTOR_FT_LT], motorPower[MOTOR_FT_RT]);
+    int max_bk = max(motorPower[MOTOR_BK_RT], motorPower[MOTOR_BK_LT]);
     float scale = (float)max(max_ft, max_bk) / 255;
 
-    currentPower[MOTOR_FT_LT] = (int)((float)currentPower[MOTOR_FT_LT] * scale);
-    currentPower[MOTOR_FT_RT] = (int)((float)currentPower[MOTOR_FT_RT] * scale);
-    currentPower[MOTOR_BK_RT] = (int)((float)currentPower[MOTOR_BK_RT] * scale);
-    currentPower[MOTOR_BK_LT] = (int)((float)currentPower[MOTOR_BK_LT] * scale);
+    motorPower[MOTOR_FT_LT] = (int)((float)motorPower[MOTOR_FT_LT] / scale);
+    motorPower[MOTOR_FT_RT] = (int)((float)motorPower[MOTOR_FT_RT] / scale);
+    motorPower[MOTOR_BK_RT] = (int)((float)motorPower[MOTOR_BK_RT] / scale);
+    motorPower[MOTOR_BK_LT] = (int)((float)motorPower[MOTOR_BK_LT] / scale);
 }
 
 
