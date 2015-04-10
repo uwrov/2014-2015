@@ -72,6 +72,7 @@ const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
 
 const int DELAY_COUNTER = 5; // delay each loop (ms)
 const int ACCELERATION = 8; // how fast motors change speed, lower means faster change
+const int ROTATE_SCALE = 6; // how fast to adjust rotation for holding position, lower is faster
 const int SENSOR_ITERATION = 100000000;
 
 
@@ -96,6 +97,13 @@ int sensorLoopCounter = 0;
 void setup() {
     Serial.begin(9600);
 
+    // initialize the compass
+    Wire.begin();
+    compass.init();
+    compass.enableDefault();
+    compass.m_min = (LSM303::vector<int16_t>) {-479, -643, -476};
+    compass.m_max = (LSM303::vector<int16_t>) {+607, +524, +609};
+
     for (int i = 0; i < NUM_MOTORS; i++) {
         pinMode(MOTOR_DIR_PORTS[i], OUTPUT);
         pinMode(MOTOR_POW_PORTS[i], OUTPUT);
@@ -104,6 +112,8 @@ void setup() {
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
 }
+
+
 
 
 void loop() {
@@ -226,26 +236,27 @@ void sendSensorData() {
 // angle as compared to previous
 void adjustAngle() {
     int newCompass = readCompass();
-    int diffAngle = (desiredCompass - newCompass + 256) % 256;
-    int a = max(2, 3);
+    int diffAngle = (desiredCompass - newCompass + 360) % 360;
 
-    if (diffAngle < 128) rotateLeft(diffAngle);
-    else rotateLeft(diffAngle - 256);
+    if (diffAngle < 180) rotateLeft(diffAngle);
+    else rotateLeft(diffAngle - 360);
 }
 
 
-// reads compass value, return a value between 0 and 255 (counter-clockwise increase, 0 north)
+// reads compass value, return a value between 0 and 360 (counter-clockwise increase)
 int readCompass() {
-    return 0;
+    compass.read();
+    float heading = 360 - compass.heading();
+    return min(max((int)heading, 0), 360);
 }
 
 
 // rotates left a certain amount
 void rotateLeft(int amount) {
-    motorPower[MOTOR_FT_LT] += amount / 4;
-    motorPower[MOTOR_FT_RT] -= amount / 4;
-    motorPower[MOTOR_BK_RT] += amount / 4;
-    motorPower[MOTOR_BK_LT] -= amount / 4;
+    motorPower[MOTOR_FT_LT] += amount / ROTATE_SCALE;
+    motorPower[MOTOR_FT_RT] -= amount / ROTATE_SCALE;
+    motorPower[MOTOR_BK_RT] += amount / ROTATE_SCALE;
+    motorPower[MOTOR_BK_LT] -= amount / ROTATE_SCALE;
     
     int max_ft = max(motorPower[MOTOR_FT_LT], motorPower[MOTOR_FT_RT]);
     int max_bk = max(motorPower[MOTOR_BK_RT], motorPower[MOTOR_BK_LT]);
@@ -256,6 +267,7 @@ void rotateLeft(int amount) {
     motorPower[MOTOR_BK_RT] = (int)((float)motorPower[MOTOR_BK_RT] / scale);
     motorPower[MOTOR_BK_LT] = (int)((float)motorPower[MOTOR_BK_LT] / scale);
 }
+
 
 
 
