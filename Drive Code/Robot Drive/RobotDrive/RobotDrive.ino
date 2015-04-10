@@ -1,68 +1,114 @@
-#define DELAY_COUNTER 5
+// Motor layout, top view. Motors 1 and 2 point towards the back. Motors 3 and 4
+// point towards the front. Motors 5 and 6 point up.
+// 
+//      Front
+//  1           2
+//   /---------\
+//  /|         |\
+//   |    5    |
+//   |         |
+//   |         |
+//   |         |
+//   |    6    |
+//  \|         |/
+//   \---------/
+//  4           3
 
-// old compass value
-int oldCompass = 0;
 
-// pneumatics port and key
-int pneumaticsPort = 1;
-const int KEYPNEUMATICS = 100;
+const int NUM_MOTORS = 6;
+const int NUM_SENSORS = 6;
 
-// Special LED packets
-const int KEYLIGHT = 101;
-const int LEDPIN = 13;
+const int DELAY_COUNTER = 5; // delay each loop (ms)
+
+
+
+// motor constants
+const int MOTOR_FT_LT = 0;
+const int MOTOR_FT_RT = 1;
+const int MOTOR_BK_RT = 2;
+const int MOTOR_BK_LT = 3;
+const int MOTOR_FT_UP = 4;
+const int MOTOR_BK_DN = 5;
+
+
+// direction constants
+const int READ_BACKWARD = 2;
+const int READ_FORWARD = 3;
+
+const int BACKWARD = 0;
+const int FORWARD = 1;
+
+
+
+
+// packet headers
+
+// headers for incoming data
+const int HEADER_KEY_IN_1 = 17;
+const int HEADER_KEY_IN_2 = 151;
+
+
+// headers for outgoing data
+const int HEADER_KEY_OUT_1 = 74;
+const int HEADER_KEY_OUT_2 = 225;
+
+
+const int HEADER_KEY_PNEUMATICS = 100; // toggle pneumatic state
+const int HEADER_KEY_LIGHT = 101; // switching LED state
+const int HEADER_KEY_PING = 102; // returning ping
+const int HEADER_KEY_HOLD_ON = 103; // hold heading
+const int HEADER_KEY_HOLD_OFF = 104; // cancel hold
+
+
+
+// port constants
+
+const int LED_PIN = 13;
+const int PNEUMATIC_PIN = 1; // pneumatics port
+
+const int MOTOR_DIR_PORTS[NUM_MOTORS] = {1, 2, 3, 4, 5, 6};
+const int MOTOR_POW_PORTS[NUM_MOTORS] = {7, 8, 9, 10, 11, 12};
+
+const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
+
+
+
+
+// misc constants
+
+const int ACCELERATION = 8; // how fast motors change speed
+const int SENSOR_ITERATION = 100000000;
+
+
+
+
+
+
+// states
+int desiredCompass = 0;
+bool hold = false;
+
 int ledState = LOW;
+int pneumaticState = LOW;
 
-// Special Ping packets
-const int KEYPING = 102;
+int currentPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // current motor power
+int motorPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // desired motor power
 
-// Motor ports (D for direction and P for power)
-// Motor keys (first compare 1 then 2)
-#define MOTORS 6
-const int motorPortsD[MOTORS] = {
-    1, 2, 3, 4, 5, 6
-};
-const int motorPortsP[MOTORS] = {
-    7, 8, 9, 10, 11, 12
-};
-int motorPower[MOTORS] = {
-    0, 0, 0, 0, 0
-};
 
-// from -256 to 256 (- being backward)
-int currentPower = 0;
-int changeRate = 8;
 
-// 1st key for reading motor data
-int keyIn1 = 17;
-// 2nd key for reading motor data
-int keyIn2 = 151;
-
-// Sensor ports and every sensor iteration to send
-// sensor value
-// Sensor key values to be sent
-#define SENSORS 6
-int sensorIteration = 100000000;
-const int sensorPorts[SENSORS] = {
-    0, 1, 2, 3, 4, 5
-};
-
-int keyOut1 = 74;
-// 1st key for sending sensor data
-int keyOut2 = 225;
-// 2nd key for sending sensor data
 
 // Counter for sensor iteration
-int counter = 0;
+int sensorLoopCounter = 0;
 // Initialize serial and output ports
 
 void setup() {
     Serial.begin(9600);
-    for (int i = 0; i < MOTORS; i++) {
-        pinMode(motorPortsD[i], OUTPUT);
-        pinMode(motorPortsP[i], OUTPUT);
+    for (int i = 0; i < NUM_MOTORS; i++) {
+        pinMode(MOTOR_DIR_PORTS[i], OUTPUT);
+        pinMode(MOTOR_POW_PORTS[i], OUTPUT);
     }
-    pinMode(pneumaticsPort, OUTPUT);
-    pinMode(LEDPIN, OUTPUT);
+    pinMode(PNEUMATIC_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
 }
 
 void loop() {
@@ -70,126 +116,138 @@ void loop() {
     while (Serial.available() >= 5) {
         readSerial();
     }
+
     motorControl();
     sendSensorData();
+
+    delay(DELAY_COUNTER);
 }
 
 void readSerial() {
-    if (Serial.read() == keyIn1 && Serial.read() == keyIn2) {
+    if (Serial.read() == HEADER_KEY_IN_1 && Serial.read() == HEADER_KEY_IN_2) {
         int specialKey = Serial.read();
-        if (specialKey == KEYPING) {
-            Serial.write(keyOut1);
-            Serial.write(keyOut2);
-            Serial.write(KEYPING);
+
+        if (specialKey == HEADER_KEY_PING) {
+            Serial.write(HEADER_KEY_OUT_1);
+            Serial.write(HEADER_KEY_OUT_2);
+            Serial.write(HEADER_KEY_PING);
             Serial.write(Serial.read());
             Serial.read();
         }
-        else if (specialKey == KEYLIGHT) {
+        else if (specialKey == HEADER_KEY_LIGHT) {
             // if the LED is off turn it on and vice-versa:
             ledState = !ledState;
             // set the LED with the ledState of the variable:
-            digitalWrite(LEDPIN, ledState);
-        } else if (specialKey == KEYPNEUMATICS) {
+            digitalWrite(LED_PIN, ledState);
+        } else if (specialKey == HEADER_KEY_PNEUMATICS) {
             // if the Pneumatics claw is off turn it on and vice-versa:
-            ledState = !ledState;
+            pneumaticState = !pneumaticState;
             // set the Pneumatics claw with the ledState of the variable:
-            digitalWrite(pneumaticsPort, ledState);
-        }
-        else {
+            digitalWrite(PNEUMATIC_PIN, pneumaticState);
+        } else if (specialKey == HEADER_KEY_HOLD_ON) {
+            // todo
+            desiredCompass = readCompass();
+            hold = true;
+        } else if (specialKey == HEADER_KEY_HOLD_OFF) {
+            hold = false;
+        } else {
             readMotorValues();
         }
     }
-}
-
-void sendSensorData() {
-    counter++;
-    // every sensorIteration iteration, reads and sends sensor
-    // reading
-    if (counter == sensorIteration) {
-        counter = 0;
-        for (int i = 0; i < SENSORS; i++) {
-            int sensorValue = analogRead(sensorPorts[i]);
-            Serial.write(keyOut1);
-            Serial.write(keyOut2);
-            Serial.write(i);
-            Serial.write(sensorValue);
-        }
-    }
-    delay(DELAY_COUNTER);
 }
 
 void readMotorValues() {
     int motorNum = Serial.read();
     int motorP = Serial.read();
     int motorD = Serial.read();
-    if (motorD > 0 && motorD < 3) {
+
+    if (motorD == READ_FORWARD || motorD == READ_BACKWARD) {
         // stores the read motorP and motorD as the targetted
-        // motor power (btw -256 and 256)
-        if (motorD == 1) {
+        // motor power (btw -255 and 255)
+        if (motorD == READ_BACKWARD) {
             motorPower[motorNum] = -1 * motorP;
         }
-        else if (motorD == 2) {
+        else if (motorD == READ_FORWARD) {
             motorPower[motorNum] = motorP;
         }
     }
 }
 
+// adjust motor power and direction to desired values
 void motorControl() {
-    for (int i = 0; i < MOTORS; i++) {
+    for (int i = 0; i < NUM_MOTORS; i++) {
         // updates motor power to be midpoint btw current power and
         // targeted power
-        currentPower += (motorPower[i] - currentPower) / changeRate;
-        // convert back to motor readable output
-        int motorD = 1;
-        int motorP = currentPower;
-        if (currentPower < 0) {
-            motorD = 0;
-            motorP = -1 * currentPower;
+        currentPower[i] += (motorPower[i] - currentPower[i]) / ACCELERATION;
+
+        if (hold) {
+            adjustAngle();
         }
-        oldCompass = readCompass();
-        analogWrite(motorPortsP[i], motorP);
-        digitalWrite(motorPortsD[i], motorD);
+
+        // convert back to motor readable output
+        int motorD = FORWARD;
+        int motorP = currentPower[i];
+        if (motorP < 0) {
+            motorD = BACKWARD;
+            motorP *= -1;
+        }
+
+        analogWrite(MOTOR_POW_PORTS[i], motorP);
+        digitalWrite(MOTOR_DIR_PORTS[i], motorD);
+    }
+}
+
+
+void sendSensorData() {
+    // every SENSOR_ITERATION iteration, reads and sends sensor reading
+    if (++sensorLoopCounter == SENSOR_ITERATION) {
+        sensorLoopCounter = 0;
+
+        for (int i = 0; i < NUM_SENSORS; i++) {
+            int sensorValue = analogRead(SENSOR_PORTS[i]);
+            Serial.write(HEADER_KEY_OUT_1);
+            Serial.write(HEADER_KEY_OUT_2);
+            Serial.write(i);
+            Serial.write(sensorValue);
+        }
     }
 }
 
 // stability control through reading of compass and adjusting motor
 // powers based on the different in angle ans compared to previous
 void adjustAngle() {
-  int newCompass = readCompass();
-  int diffAngle = newCompass - oldCompass;
-  // if diffAngle > 0, rotate left if diffAngle < 0, rotate right 
-  if (diffAngle < 0) { // normally rotate right
-    if (diffAngle < -128) { // rotating left would be more efficient
-      rotateLeft(-1 * diffAngle);
-    } else {
-      rotateRight(-1 * diffAngle);
-    }  
-} else if (diffAngle > 0) { // new > old, rotate left normally
-      if (diffAngle > 128) { // rotate right is more efficient
-        rotateRight(diffAngle);
-      } else {
-        rotateLeft(diffAngle);
-      }
-  }
+    int newCompass = readCompass();
+    int diffAngle = newCompass - desiredCompass;
+    // if diffAngle > 0, rotate left if diffAngle < 0, rotate right 
+    if (diffAngle < 0) { // normally rotate right
+        if (diffAngle < -128) { // rotating left would be more efficient
+            rotateLeft(-1 * diffAngle);
+        } else {
+            rotateRight(-1 * diffAngle);
+        }  
+    } else if (diffAngle > 0) { // new > old, rotate left normally
+        if (diffAngle > 128) { // rotate right is more efficient
+            rotateRight(diffAngle);
+        } else {
+            rotateLeft(diffAngle);
+        }
+    }
 }
 
-// reads compass value, return a value between 0 and 255
+// reads compass value, return a value between 0 and 255 (counter-clockwise increase)
 int readCompass() {
-  return 0;
+    return 0;
 }
 
 // rotates left a certain amount
 void rotateLeft(int amount) {
-  motorPower[0] += amount / 4;
-  motorPower[1] -= amount / 4;
-  motorPower[2] += amount / 4;
-  motorPower[3] -= amount / 4;
+    currentPower[0] += amount / 4;
+    currentPower[1] -= amount / 4;
+    currentPower[2] += amount / 4;
+    currentPower[3] -= amount / 4;
 }
 
 // rotates right a certain amount
 void rotateRight(int amount) {
-  motorPower[0] -= amount / 4;
-  motorPower[1] += amount / 4;
-  motorPower[2] -= amount / 4;
-  motorPower[3] += amount / 4;
+    rotateLeft(-amount);
 }
