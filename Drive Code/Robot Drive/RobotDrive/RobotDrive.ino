@@ -17,8 +17,6 @@
 const int NUM_MOTORS = 6;
 const int NUM_SENSORS = 6;
 
-const int DELAY_COUNTER = 5; // delay each loop (ms)
-
 
 // motor constants
 const int MOTOR_FT_LT = 0;
@@ -72,6 +70,7 @@ const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
 
 // misc constants
 
+const int DELAY_COUNTER = 5; // delay each loop (ms)
 const int ACCELERATION = 8; // how fast motors change speed, lower means faster change
 const int SENSOR_ITERATION = 100000000;
 
@@ -96,17 +95,19 @@ int sensorLoopCounter = 0;
 // Initialize serial and output ports
 void setup() {
     Serial.begin(9600);
+
     for (int i = 0; i < NUM_MOTORS; i++) {
         pinMode(MOTOR_DIR_PORTS[i], OUTPUT);
         pinMode(MOTOR_POW_PORTS[i], OUTPUT);
     }
+
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
 }
 
 
 void loop() {
-    // read and turn MOTORS from Serial port
+    // packets are 5 bytes each
     while (Serial.available() >= 5) {
         readSerial();
     }
@@ -120,31 +121,34 @@ void loop() {
 
 void readSerial() {
     if (Serial.read() == HEADER_KEY_IN_1 && Serial.read() == HEADER_KEY_IN_2) {
-        int specialKey = Serial.read();
+        int specialKey = Serial.peek();
 
         if (specialKey == HEADER_KEY_PING) {
+            Serial.read();
             Serial.write(HEADER_KEY_OUT_1);
             Serial.write(HEADER_KEY_OUT_2);
             Serial.write(HEADER_KEY_PING);
             Serial.write(Serial.read());
             Serial.read();
-        }
-        else if (specialKey == HEADER_KEY_LIGHT) {
+        } else if (specialKey == HEADER_KEY_LIGHT) {
             // if the LED is off turn it on and vice-versa:
             ledState = !ledState;
             // set the LED with the ledState of the variable:
             digitalWrite(LED_PIN, ledState);
+            Serial.read(); Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_PNEUMATICS) {
             // if the Pneumatics claw is off turn it on and vice-versa:
             pneumaticState = !pneumaticState;
             // set the Pneumatics claw with the ledState of the variable:
             digitalWrite(PNEUMATIC_PIN, pneumaticState);
+            Serial.read(); Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_HOLD_ON) {
-            // todo
             desiredCompass = readCompass();
             hold = true;
+            Serial.read(); Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_HOLD_OFF) {
             hold = false;
+            Serial.read(); Serial.read(); Serial.read();
         } else {
             readMotorValues();
         }
