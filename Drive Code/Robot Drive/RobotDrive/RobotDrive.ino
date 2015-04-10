@@ -14,12 +14,10 @@
 //   \---------/
 //  4           3
 
-
 const int NUM_MOTORS = 6;
 const int NUM_SENSORS = 6;
 
 const int DELAY_COUNTER = 5; // delay each loop (ms)
-
 
 
 // motor constants
@@ -40,8 +38,7 @@ const int FORWARD = 1;
 
 
 
-
-// packet headers
+// *** PACKET HEADERS ***
 
 // headers for incoming data
 const int HEADER_KEY_IN_1 = 17;
@@ -61,7 +58,7 @@ const int HEADER_KEY_HOLD_OFF = 104; // cancel hold
 
 
 
-// port constants
+// *** PORT CONSTANTS ***
 
 const int LED_PIN = 13;
 const int PNEUMATIC_PIN = 1; // pneumatics port
@@ -73,14 +70,10 @@ const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
 
 
 
-
 // misc constants
 
 const int ACCELERATION = 8; // how fast motors change speed
 const int SENSOR_ITERATION = 100000000;
-
-
-
 
 
 
@@ -95,12 +88,12 @@ int currentPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // current motor power
 int motorPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // desired motor power
 
 
-
-
 // Counter for sensor iteration
 int sensorLoopCounter = 0;
-// Initialize serial and output ports
 
+
+
+// Initialize serial and output ports
 void setup() {
     Serial.begin(9600);
     for (int i = 0; i < NUM_MOTORS; i++) {
@@ -110,6 +103,7 @@ void setup() {
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
 }
+
 
 void loop() {
     // read and turn MOTORS from Serial port
@@ -122,6 +116,7 @@ void loop() {
 
     delay(DELAY_COUNTER);
 }
+
 
 void readSerial() {
     if (Serial.read() == HEADER_KEY_IN_1 && Serial.read() == HEADER_KEY_IN_2) {
@@ -156,6 +151,7 @@ void readSerial() {
     }
 }
 
+
 void readMotorValues() {
     int motorNum = Serial.read();
     int motorP = Serial.read();
@@ -163,7 +159,7 @@ void readMotorValues() {
 
     if (motorD == READ_FORWARD || motorD == READ_BACKWARD) {
         // stores the read motorP and motorD as the targetted
-        // motor power (btw -255 and 255)
+        // motor power [-255, 255]
         if (motorD == READ_BACKWARD) {
             motorPower[motorNum] = -1 * motorP;
         }
@@ -173,11 +169,11 @@ void readMotorValues() {
     }
 }
 
+
 // adjust motor power and direction to desired values
 void motorControl() {
     for (int i = 0; i < NUM_MOTORS; i++) {
-        // updates motor power to be midpoint btw current power and
-        // targeted power
+        // updates motor power to be midpoint btw current power and targeted power
         currentPower[i] += (motorPower[i] - currentPower[i]) / ACCELERATION;
 
         if (hold) {
@@ -213,41 +209,47 @@ void sendSensorData() {
     }
 }
 
-// stability control through reading of compass and adjusting motor
-// powers based on the different in angle ans compared to previous
+
+// stability control through reading of compass and adjusting motor powers based on the different in
+// angle ans compared to previous
 void adjustAngle() {
     int newCompass = readCompass();
-    int diffAngle = newCompass - desiredCompass;
-    // if diffAngle > 0, rotate left if diffAngle < 0, rotate right 
-    if (diffAngle < 0) { // normally rotate right
-        if (diffAngle < -128) { // rotating left would be more efficient
-            rotateLeft(-1 * diffAngle);
-        } else {
-            rotateRight(-1 * diffAngle);
-        }  
-    } else if (diffAngle > 0) { // new > old, rotate left normally
-        if (diffAngle > 128) { // rotate right is more efficient
-            rotateRight(diffAngle);
-        } else {
-            rotateLeft(diffAngle);
-        }
-    }
+    int diffAngle = (desiredCompass - newCompass + 256) % 256;
+    int a = max(2, 3);
+
+    if (diffAngle < 128) rotateLeft(diffAngle);
+    else rotateLeft(diffAngle - 256);
 }
 
-// reads compass value, return a value between 0 and 255 (counter-clockwise increase)
+
+// reads compass value, return a value between 0 and 255 (counter-clockwise increase, 0 north)
 int readCompass() {
     return 0;
 }
 
+
 // rotates left a certain amount
 void rotateLeft(int amount) {
-    currentPower[0] += amount / 4;
-    currentPower[1] -= amount / 4;
-    currentPower[2] += amount / 4;
-    currentPower[3] -= amount / 4;
+    currentPower[MOTOR_FT_LT] += amount / 4;
+    currentPower[MOTOR_FT_RT] -= amount / 4;
+    currentPower[MOTOR_BK_RT] += amount / 4;
+    currentPower[MOTOR_BK_LT] -= amount / 4;
+    
+    int max_ft = max(currentPower[MOTOR_FT_LT], currentPower[MOTOR_FT_RT]);
+    int max_bk = max(currentPower[MOTOR_BK_RT], currentPower[MOTOR_BK_LT]);
+    float scale = (float)max(max_ft, max_bk) / 255;
+
+    currentPower[MOTOR_FT_LT] = (int)((float)currentPower[MOTOR_FT_LT] * scale);
+    currentPower[MOTOR_FT_RT] = (int)((float)currentPower[MOTOR_FT_RT] * scale);
+    currentPower[MOTOR_BK_RT] = (int)((float)currentPower[MOTOR_BK_RT] * scale);
+    currentPower[MOTOR_BK_LT] = (int)((float)currentPower[MOTOR_BK_LT] * scale);
 }
 
-// rotates right a certain amount
-void rotateRight(int amount) {
-    rotateLeft(-amount);
-}
+
+
+
+
+
+
+
+
