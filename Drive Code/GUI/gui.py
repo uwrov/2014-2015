@@ -1,7 +1,7 @@
-import math, os, string, sys
 import cv2
 import RobotSurfaceControl as rc
 import pygame as pg
+import numpy
 
 
 pg.init()
@@ -9,10 +9,18 @@ pg.init()
 # colors
 WHITE = (255, 255, 255)
 BLACK = (0,0,0)
-gray = (90, 90, 90)
-red = (255, 0, 0)
-light_blue = (100, 150, 255)
-dark_blue = (20, 100, 195)
+
+camera_index = 0
+camera=cv2.VideoCapture(camera_index)
+
+SCREEN_SIZE = (1080, 520)
+CAM_VIEW_SIZE = (320, 180)
+
+x = 0;
+y = 0;
+speed = 0;
+rotation = 0;
+
 
 class GuiPrint(object):
 
@@ -31,7 +39,7 @@ class GuiPrint(object):
 		
     def reset(self):
         """ Reset text to the top of the screen. """
-        self.x_pos = 10
+        self.x_pos = 700
         self.y_pos = 10
         self.line_height = 15
 
@@ -41,23 +49,48 @@ def joy_init():
     """Initializes pygame and the joystick, and returns the joystick to be
     used."""
     
-    global use_joy
 
     pg.joystick.init()
     if pg.joystick.get_count() == 0:
         print "joy_init: No joysticks connected"
+        useJoy = False
         return
     joystick = pg.joystick.Joystick(0)
     joystick.init()
 
     return joystick
-	
-	
+
+
+def update_values():
+    global x, y, speed, rotation, joystickEnabled
+    if pg.joystick.get_count() == 0:
+        joystickEnabled = False
+        x = (pg.mouse.get_pos()[0] - SCREEN_SIZE[0]/2.0) / (SCREEN_SIZE[0] / 2.0)
+        y = -((-(pg.mouse.get_pos()[1] - SCREEN_SIZE[1])/2.0) / (SCREEN_SIZE[1] / 2.0))
+    else:
+        joystickEnabled = True
+        x = joystick.get_axis(0)
+        y = joystick.get_axis(1)
+        speed = joystick.get_axis(2)
+        rotation = joystick.get_axis(3)
+       
+
+def getCamFrame(camera):
+    retval,frame=camera.read()
+    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+    frame=numpy.rot90(frame)
+    frame=pg.surfarray.make_surface(frame)
+    return frame
+
+def blitCamFrame(frame,screen):
+    screen.blit(frame,(10,10))
+    return screen
 			
 def main():
     global joystick
+    global SCREEN_SIZE
     joystick = joy_init()
-    screen = pg.display.set_mode((200, 300))
+    screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
     pg.display.set_caption("Drive GUI")
     
     guiPrint = GuiPrint()
@@ -65,22 +98,32 @@ def main():
 	
     done = False
 	
-    rc.setup("COM3")
+    #rc.setup("")
     #cv2.imshow('frame', rc.getImage())
 
     while not done:
         for event in pg.event.get():
-			if event.type == pg.QUIT:
+            if event.type == pg.VIDEORESIZE:
+                SCREEN_SIZE = event.size
+                screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
+            if event.type == pg.QUIT:
 				done = True
+            
+
+
         # limit to 30 fps
         clock.tick(30)
 
         guiPrint.reset()
         screen.fill(WHITE)
-        x = joystick.get_axis(0) 
-        y = joystick.get_axis(1)
-        speed = joystick.get_axis(3)
-        rotation = joystick.get_axis(4)
+        
+        update_values()
+
+        if joystickEnabled:
+            guiPrint.out(screen, "Joystick Enabled")
+        else: 
+            guiPrint.out(screen, "Joystick Disabled")
+       
         guiPrint.out(screen, "X value:{:>6.3f}".format(x))
         guiPrint.out(screen, "Y value:{:>6.3f}".format(y))
         guiPrint.out(screen, "Speed: {:>6.3f}".format(speed))
@@ -91,15 +134,18 @@ def main():
         guiPrint.out(screen, "Sensor: {}".format(rc.sensors[0]))
         guiPrint.out(screen, "Sensor: {}".format(rc.sensors[1]))
 		
+        """
         buttons = joystick.get_numbuttons()
  
         for i in range(buttons):
             button = joystick.get_button(i)
             guiPrint.out(screen, "Button {:>2} value: {}".format(i, button))
-
-		
+        """
+        frame=getCamFrame(camera)
+        screen=blitCamFrame(frame,screen)
         pg.display.flip()
 
+useJoy = False
 
 main()
 
