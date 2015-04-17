@@ -27,7 +27,7 @@ sensor2Name = 1
 sensors = {sensor1Name : 0, sensor2Name : 0}
 
 # Motor values sent to Arduino
-# Takes values between -255 and 255
+# Stores values between -255 and 255
 motors = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
 
 FORWARD = 3
@@ -52,7 +52,7 @@ image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
 
 # Set up serial communication and cameras, and start data reading thread
 # Run this once program begins
-# Returns 1 if an error occured during connect, 0 otherwise
+# Returns 1 if an error occured during serial connection, 0 otherwise
 def setup(serialPort):
 	global ser
 
@@ -68,39 +68,55 @@ def setup(serialPort):
 	cam2.set(3, IMAGE_SIZE[0])
 	cam2.set(4, IMAGE_SIZE[1])
 
-	start_new_thread(updateData, ())
+	start_new_thread(__updateData__, ())
 	return 0
 
 
 # Updates the sensor data and ping time from the Arduino. Runs on
 # a separate thread after setup runs
-def updateData():
+def __updateData__():
+	global motors
 	global sensors
 	global pingTime
 	global pingStartTime
 
 	while True:
 		sleep(0.1)
+		
+		# Calculate motor/direction values for Arduino
+		frontLeftDir = 2 if motors[1] < 0 else frontLeftDir = 3
+		frontLeftPow = abs(motors[1])
+		frontRightDir = 2 if motors[2] < 0 else frontRightDir = 3
+		frontRightPow = abs(motors[2])
+		backRightDir = 2 if motors[3] < 0 else backRightDir = 3
+		backRightPow = abs(motors[3])
+		backLeftDir = 2 if motors[4] < 0 else backLeftDir = 3
+		backLeftPow = abs(motors[4])
+		zFrontDir = 2 if motors[5] < 0 else zFrontDir = 3
+		zFrontPow = abs(motors[5])
+		zBackDir = 2 if motors[6] < 0 else zBackDir = 3
+		zBackPow = abs(motors[6])
 
 		# Write motor values to the Arduino
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0, normClockPow, clockDir])
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1, normCounterPow, counterDir])
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2, normClockPow, oppClockDir])
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3, normCounterPow, oppCounterDir])
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4, zPow, zDir])
-		# ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5, zPow, zDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0, frontLeftPow, frontLeftDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1, frontRightPow, frontRightDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2, backRightPow, backRightDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3, backLeftPow, backLeftDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4, zFrontPow, zFrontDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5, zBackPow, zBackDir])
 
+		# Check for new packets from Arduino
 		# Packets should be received in sets of 4
 		while ser.inWaiting() >= 4:
-			sensorHeader1 = readByte(ser)
+			sensorHeader1 = __readByte__(ser)
 			while sensorHeader1 != HEADER_KEY_IN_1:
-				sensorHeader1 = readByte(ser)
+				sensorHeader1 = __readByte__(ser)
+			sensorHeader2 = __readByte__(ser)
 
-			sensorHeader2 = readByte(ser)
 			if sensorHeader2 == HEADER_KEY_IN_2:
-				sensorName = readByte(ser)
-				sensorValue = readByte(ser)
-				# Check if sent byte is returned ping
+				sensorName = __readByte__(ser)
+				sensorValue = __readByte__(ser)
+				# Check if sent packet is returned ping
 				if sensorName == HEADER_KEY_PING:
 					pingEndTime = clock()
 					pingTime = pingEndTime - pingStartTime
@@ -113,14 +129,13 @@ def updateData():
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	global motors
 
-	setZ(zSpeed)
-	setMotorTranslate(xSpeed, ySpeed)
-	setMotorRotation(rotation)
-
-	print motors
+	__setZ__(zSpeed)
+	__setMotorTranslate__(xSpeed, ySpeed)
+	__setMotorRotation__(rotation)
 
 
-def setZ(zSpeed):
+# Set the speed of the z direction (up/down) motors
+def __setZ__(zSpeed):
 	global motors
 
 	zPow = int(zSpeed * 255)
@@ -128,29 +143,34 @@ def setZ(zSpeed):
 	motors[6] = zPow
 
 
-def setMotorTranslate(xSpeed, ySpeed):
+# Set the speed of the x/y direction (up/down/left/right) motors
+def __setMotorTranslate__(xSpeed, ySpeed):
+	# Translate x/y coordinate values to motor coordinate values
 	m1 = .5 * xSpeed + ySpeed / (2 * math.sqrt(3))
 	m2 = -.5 * xSpeed + ySpeed / (2 * math.sqrt(3))
 
+	# Don't normalize values if both are 0
 	if m1 == 0 and m2 == 0:
 		motors[1] = motors[2] = motors[3] = motors[4] = 0
 	else:
 		m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1)
 		m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(xSpeed, ySpeed), 1)
-		motors[1] = m1_norm
-		motors[2] = m2_norm
-		motors[3] = -m1_norm
-		motors[4] = -m2_norm
+		motors[1] = -m1_norm
+		motors[2] = -m2_norm
+		motors[3] = m1_norm
+		motors[4] = m2_norm
 
 
-def setMotorRotation(rotation):
-	frontLeftPow = motors[1] + ROTATION_SCALE * rotation
-	frontRightPow = motors[2] - ROTATION_SCALE * rotation
-	backRightPow = motors[3] + ROTATION_SCALE * rotation
-	backLeftPow = motors[4] - ROTATION_SCALE * rotation
+# Add the speed of rotation to the motor speeds
+def __setMotorRotation__(rotation):
+	frontLeftPow = motors[1] - ROTATION_SCALE * rotation
+	frontRightPow = motors[2] + ROTATION_SCALE * rotation
+	backRightPow = motors[3] - ROTATION_SCALE * rotation
+	backLeftPow = motors[4] + ROTATION_SCALE * rotation
 
-	maxPow = max(frontLeftPow, frontRightPow, backRightPow, backLeftPow)
-	if maxPow > 255:
+	# Normalize the values if greater than 1
+	maxPow = max(abs(frontLeftPow), abs(frontRightPow), abs(backRightPow), abs(backLeftPow))
+	if maxPow > 1:
 		frontLeftPow /= maxPow
 		frontRightPow /= maxPow
 		backRightPow /= maxPow
@@ -205,11 +225,11 @@ def testPing():
 
 
 # Return the last recorded ping time
-# -1 if no ping yet
+# -1 if no ping recorded yet
 def getPing():
 	return pingTime
 
 
-# Read a byte from serial, and return it.
-def readByte(ser):
+# Read a byte from serial, and return the value.
+def __readByte__(ser):
 	return ord(ser.read())
