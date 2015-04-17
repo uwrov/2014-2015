@@ -14,6 +14,11 @@
 //   \---------/
 //  4           3
 
+
+#include <Wire.h>
+#include <LSM303.h>
+
+
 const int NUM_MOTORS = 6;
 const int NUM_SENSORS = 6;
 
@@ -90,6 +95,8 @@ int motorPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // desired motor power
 
 // Counter for sensor iteration
 int sensorLoopCounter = 0;
+
+LSM303 compass; // compass object
 
 
 
@@ -267,13 +274,3 @@ void rotateLeft(int amount) {
     motorPower[MOTOR_BK_RT] = (int)((float)motorPower[MOTOR_BK_RT] / scale);
     motorPower[MOTOR_BK_LT] = (int)((float)motorPower[MOTOR_BK_LT] / scale);
 }
-
-
-
-
-
-
-
-
-
-
