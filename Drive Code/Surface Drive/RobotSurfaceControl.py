@@ -18,8 +18,11 @@ HEADER_KEY_HOLD_OFF = 104
 
 # Communication
 ser = None
+
 pingTime = -1
 pingStartTime = 0
+
+WAIT_TIME = 0.1
 
 # Sensor values received from Arduino
 sensor1Name = 0
@@ -81,7 +84,7 @@ def __updateData__():
 	global pingStartTime
 
 	while True:
-		sleep(0.1)
+		sleep(WAIT_TIME)
 		
 		# Calculate motor/direction values for Arduino
 		frontLeftDir = 2 if motors[1] < 0 else 3
@@ -98,22 +101,23 @@ def __updateData__():
 		zBackPow = abs(motors[6])
 
 		# Write motor values to the Arduino
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0, frontLeftPow, frontLeftDir])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1, frontRightPow, frontRightDir])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2, backRightPow, backRightDir])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3, backLeftPow, backLeftDir])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4, zFrontPow, zFrontDir])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5, zBackPow, zBackDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0,
+			frontLeftPow, frontLeftDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1,
+			frontRightPow, frontRightDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2,
+			backRightPow, backRightDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3,
+			backLeftPow, backLeftDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4,
+			zFrontPow, zFrontDir])
+		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5,
+			zBackPow, zBackDir])
 
 		# Check for new packets from Arduino
 		# Packets should be received in sets of 4
 		while ser.inWaiting() >= 4:
-			sensorHeader1 = __readByte__(ser)
-			while sensorHeader1 != HEADER_KEY_IN_1:
-				sensorHeader1 = __readByte__(ser)
-			sensorHeader2 = __readByte__(ser)
-
-			if sensorHeader2 == HEADER_KEY_IN_2:
+			if __readByte__(ser) == HEADER_KEY_IN_1 and __readByte__(ser) == HEADER_KEY_IN_2:
 				sensorName = __readByte__(ser)
 				sensorValue = __readByte__(ser)
 				# Check if sent packet is returned ping
@@ -169,7 +173,8 @@ def __setMotorRotation__(rotation):
 	backLeftPow = motors[4] + ROTATION_SCALE * rotation
 
 	# Normalize the values if greater than 1
-	maxPow = max(abs(frontLeftPow), abs(frontRightPow), abs(backRightPow), abs(backLeftPow))
+	maxPow = max(abs(frontLeftPow), abs(frontRightPow),
+		abs(backRightPow), abs(backLeftPow))
 	if maxPow > 1:
 		frontLeftPow /= maxPow
 		frontRightPow /= maxPow
@@ -204,14 +209,16 @@ def releaseCamera():
 # Change the state of the claw
 # Switches between open and closed
 def moveClaw():
-	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, HEADER_KEY_PNEUMATICS, 0, 0])
+	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
+		HEADER_KEY_PNEUMATICS, 0, 0])
 
 
 # Writes a special byte that should trigger the Arduino light
 # to turn on. Use to test communication with the Arduino
 def testComm():
 	# Zeros are garbage data
-	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, HEADER_KEY_LIGHT, 0, 0])
+	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
+		HEADER_KEY_LIGHT, 0, 0])
 
 
 # Writes a special byte that should be returned by the Arduino.
@@ -221,7 +228,8 @@ def testPing():
 
 	pingStartTime = clock()
 	# Zeros are garbage data
-	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, HEADER_KEY_PING, 0, 0])
+	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
+		HEADER_KEY_PING, 0, 0])
 
 
 # Return the last recorded ping time
