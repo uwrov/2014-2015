@@ -84,17 +84,17 @@ def __updateData__():
 		sleep(0.1)
 		
 		# Calculate motor/direction values for Arduino
-		frontLeftDir = 2 if motors[1] < 0 else frontLeftDir = 3
+		frontLeftDir = 2 if motors[1] < 0 else 3
 		frontLeftPow = abs(motors[1])
-		frontRightDir = 2 if motors[2] < 0 else frontRightDir = 3
+		frontRightDir = 2 if motors[2] < 0 else 3
 		frontRightPow = abs(motors[2])
-		backRightDir = 2 if motors[3] < 0 else backRightDir = 3
+		backRightDir = 2 if motors[3] < 0 else 3
 		backRightPow = abs(motors[3])
-		backLeftDir = 2 if motors[4] < 0 else backLeftDir = 3
+		backLeftDir = 2 if motors[4] < 0 else 3
 		backLeftPow = abs(motors[4])
-		zFrontDir = 2 if motors[5] < 0 else zFrontDir = 3
+		zFrontDir = 2 if motors[5] < 0 else 3
 		zFrontPow = abs(motors[5])
-		zBackDir = 2 if motors[6] < 0 else zBackDir = 3
+		zBackDir = 2 if motors[6] < 0 else 3
 		zBackPow = abs(motors[6])
 
 		# Write motor values to the Arduino
