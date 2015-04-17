@@ -36,8 +36,8 @@ const int MOTOR_BK_DN = 5;
 const int READ_BACKWARD = 2;
 const int READ_FORWARD = 3;
 
-const int BACKWARD = 0;
-const int FORWARD = 1;
+const int BACKWARD = LOW;
+const int FORWARD = HIGH;
 
 
 
@@ -66,10 +66,10 @@ const int HEADER_KEY_HOLD_OFF = 104; // cancel hold
 const int LED_PIN = 13;
 const int PNEUMATIC_PIN = 1; // pneumatics port
 
-const int MOTOR_DIR_PORTS[NUM_MOTORS] = {1, 2, 3, 4, 5, 6};
-const int MOTOR_POW_PORTS[NUM_MOTORS] = {7, 8, 9, 10, 11, 12};
+const int MOTOR_DIR_PORTS[NUM_MOTORS] = {22, 24, 26, 28, 30, 32};
+const int MOTOR_POW_PORTS[NUM_MOTORS] = {2, 3, 4, 5, 6, 7};
 
-const int SENSOR_PORTS[NUM_SENSORS] = {0, 1, 2, 3, 4, 5};
+const int SENSOR_PORTS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5};
 
 
 
