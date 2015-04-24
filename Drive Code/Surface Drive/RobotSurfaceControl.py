@@ -1,7 +1,7 @@
-from serial import Serial
-import numpy
 import math
+import numpy
 import cv2
+from serial import Serial
 from time import clock, sleep
 from thread import start_new_thread
 
@@ -30,16 +30,17 @@ sensor2Name = 1
 sensors = {sensor1Name : 0, sensor2Name : 0}
 
 # Motor values sent to Arduino
-# Stores values between -255 and 255
+# Stores values between -100 and 100
 motors = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
 
-FORWARD = 3
-BACKWARD = 2
 ROTATION_SCALE = 0.5
+MOTOR_REST_POSITION = 1475
+MOTOR_VARIATION = 400
+DISPLAY_SCALE = 4
 
 # Image
 IMAGE_SIZE = [480, 640]
-image = numpy.zeros((IMAGE_SIZE[0], IMAGE_SIZE[1] * 2, 3), numpy.uint8)
+image = numpy.zeros((IMAGE_SIZE[0] * 2, IMAGE_SIZE[1], 3), numpy.uint8)
 
 # THE BOT
 #
@@ -87,32 +88,26 @@ def __updateData__():
 		sleep(WAIT_TIME)
 		
 		# Calculate motor/direction values for Arduino
-		frontLeftDir = BACKWARD if motors[1] < 0 else FORWARD
-		frontLeftPow = abs(motors[1])
-		frontRightDir = BACKWARD if motors[2] < 0 else FORWARD
-		frontRightPow = abs(motors[2])
-		backRightDir = BACKWARD if motors[3] < 0 else FORWARD
-		backRightPow = abs(motors[3])
-		backLeftDir = BACKWARD if motors[4] < 0 else FORWARD
-		backLeftPow = abs(motors[4])
-		zFrontDir = BACKWARD if motors[5] < 0 else FORWARD
-		zFrontPow = abs(motors[5])
-		zBackDir = BACKWARD if motors[6] < 0 else FORWARD
-		zBackPow = abs(motors[6])
+		frontLeftPow = motors[1] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		frontRightPow = motors[2] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		backRightPow = motors[3] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		backLeftPow = motors[4] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		zFrontPow = motors[5] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		zBackPow = motors[6] * DISPLAY_SCALE + MOTOR_REST_POSITION
 
 		# Write motor values to the Arduino
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0,
-			frontLeftPow, frontLeftDir])
+			frontLeftPow, 0])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1,
-			frontRightPow, frontRightDir])
+			frontRightPow, 0])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2,
-			backRightPow, backRightDir])
+			backRightPow, 0])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3,
-			backLeftPow, backLeftDir])
+			backLeftPow, 0])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4,
-			zFrontPow, zFrontDir])
+			zFrontPow, 0])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5,
-			zBackPow, zBackDir])
+			zBackPow, 0])
 
 		# Check for new packets from Arduino
 		# Packets should be received in sets of 4
@@ -137,12 +132,14 @@ def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	__setMotorTranslate__(xSpeed, ySpeed)
 	__setMotorRotation__(rotation)
 
+	print motors
+
 
 # Set the speed of the z direction (up/down) motors
 def __setZ__(zSpeed):
 	global motors
 
-	zPow = int(zSpeed * 255)
+	zPow = int(zSpeed * MOTOR_VARIATION / DISPLAY_SCALE)
 	motors[5] = zPow
 	motors[6] = zPow
 
@@ -181,10 +178,10 @@ def __setMotorRotation__(rotation):
 		backRightPow /= maxPow
 		backLeftPow /= maxPow
 
-	motors[1] = int(frontLeftPow * 255)
-	motors[2] = int(frontRightPow * 255)
-	motors[3] = int(backRightPow * 255)
-	motors[4] = int(backLeftPow * 255)
+	motors[1] = int(frontLeftPow * MOTOR_VARIATION / DISPLAY_SCALE)
+	motors[2] = int(frontRightPow * MOTOR_VARIATION / DISPLAY_SCALE)
+	motors[3] = int(backRightPow * MOTOR_VARIATION / DISPLAY_SCALE)
+	motors[4] = int(backLeftPow * MOTOR_VARIATION / DISPLAY_SCALE)
 
 
 # Return the latest image from the camera
@@ -194,7 +191,7 @@ def getImage():
 
 	# Add images to blank image, puts 2 images onto 1 frame
 	image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
-	image[0 : IMAGE_SIZE[0], IMAGE_SIZE[1] : IMAGE_SIZE[1] * 2] = image2
+	image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = image2
 	return image
 
 
