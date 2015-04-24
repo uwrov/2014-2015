@@ -15,6 +15,7 @@
 //  4           3
 
 
+#include <Servo.h>
 #include <Wire.h>
 #include <LSM303.h>
 
@@ -66,8 +67,7 @@ const int HEADER_KEY_HOLD_OFF = 104; // cancel hold
 const int LED_PIN = 13;
 const int PNEUMATIC_PIN = 1; // pneumatics port
 
-const int MOTOR_DIR_PORTS[NUM_MOTORS] = {22, 24, 26, 28, 30, 32};
-const int MOTOR_POW_PORTS[NUM_MOTORS] = {2, 3, 4, 5, 6, 7};
+const int MOTOR_PORTS[NUM_MOTORS] = {22, 24, 26, 28, 30, 32};
 
 const int SENSOR_PORTS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5};
 
@@ -89,6 +89,8 @@ bool hold = false;
 int ledState = LOW;
 int pneumaticState = LOW;
 
+
+const Servo motors[NUM_MOTORS];
 int currentPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // current motor power
 int motorPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // desired motor power
 
@@ -112,8 +114,8 @@ void setup() {
     compass.m_max = (LSM303::vector<int16_t>) {+607, +524, +609};
 
     for (int i = 0; i < NUM_MOTORS; i++) {
-        pinMode(MOTOR_DIR_PORTS[i], OUTPUT);
-        pinMode(MOTOR_POW_PORTS[i], OUTPUT);
+        pinMode(MOTOR_PORTS[i], OUTPUT);
+        motors[i].attach(MOTOR_PORTS[i]);
     }
 
     pinMode(PNEUMATIC_PIN, OUTPUT);
@@ -197,15 +199,10 @@ void motorControl() {
         currentPower[i] = getNewPower(i);
 
         // convert back to motor readable output
-        int motorDir = FORWARD;
         int motorPow = currentPower[i];
-        if (motorPow < 0) {
-            motorDir = BACKWARD;
-            motorPow *= -1;
-        }
-
-        analogWrite(MOTOR_POW_PORTS[i], motorPow);
-        digitalWrite(MOTOR_DIR_PORTS[i], motorDir);
+        motorPow = motorPow / 256 * 200 + 1474;
+        
+        motors[i].writeMicroseconds(motorPow);
     }
 }
 
