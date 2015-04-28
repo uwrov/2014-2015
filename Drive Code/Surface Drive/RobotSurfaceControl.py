@@ -132,8 +132,6 @@ def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	__setMotorTranslate__(xSpeed, ySpeed)
 	__setMotorRotation__(rotation)
 
-	print motors
-
 
 # Set the speed of the z direction (up/down) motors
 def __setZ__(zSpeed):
