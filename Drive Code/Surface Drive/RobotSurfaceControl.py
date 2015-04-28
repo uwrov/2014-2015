@@ -87,7 +87,7 @@ def __updateData__():
 	while True:
 		sleep(WAIT_TIME)
 		
-		# Calculate motor/direction values for Arduino
+		# Calculate motor values for Arduino
 		frontLeftPow = motors[1] * DISPLAY_SCALE + MOTOR_REST_POSITION
 		frontRightPow = motors[2] * DISPLAY_SCALE + MOTOR_REST_POSITION
 		backRightPow = motors[3] * DISPLAY_SCALE + MOTOR_REST_POSITION
@@ -97,20 +97,20 @@ def __updateData__():
 
 		# Write motor values to the Arduino
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0,
-			frontLeftPow, 0])
+			frontLeftPow])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1,
-			frontRightPow, 0])
+			frontRightPow])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2,
-			backRightPow, 0])
+			backRightPow])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3,
-			backLeftPow, 0])
+			backLeftPow])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4,
-			zFrontPow, 0])
+			zFrontPow])
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5,
-			zBackPow, 0])
+			zBackPow])
 
 		# Check for new packets from Arduino
-		# Packets should be received in sets of 4
+		# Packets should be received in sets of 4 bytes
 		while ser.inWaiting() >= 4:
 			if __readByte__(ser) == HEADER_KEY_IN_1 and __readByte__(ser) == HEADER_KEY_IN_2:
 				sensorName = __readByte__(ser)
@@ -205,7 +205,7 @@ def releaseCamera():
 # Switches between open and closed
 def moveClaw():
 	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
-		HEADER_KEY_PNEUMATICS, 0, 0])
+		HEADER_KEY_PNEUMATICS, 0])
 
 
 # Writes a special byte that should trigger the Arduino light
@@ -213,7 +213,7 @@ def moveClaw():
 def testComm():
 	# Zeros are garbage data
 	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
-		HEADER_KEY_LIGHT, 0, 0])
+		HEADER_KEY_LIGHT, 0])
 
 
 # Writes a special byte that should be returned by the Arduino.
@@ -224,7 +224,7 @@ def testPing():
 	pingStartTime = clock()
 	# Zeros are garbage data
 	ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2,
-		HEADER_KEY_PING, 0, 0])
+		HEADER_KEY_PING, 0])
 
 
 # Return the last recorded ping time

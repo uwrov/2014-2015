@@ -33,14 +33,6 @@ const int MOTOR_FT_UP = 4;
 const int MOTOR_BK_DN = 5;
 
 
-// direction constants
-const int READ_BACKWARD = 2;
-const int READ_FORWARD = 3;
-
-const int BACKWARD = LOW;
-const int FORWARD = HIGH;
-
-
 
 // *** PACKET HEADERS ***
 
@@ -91,8 +83,10 @@ int pneumaticState = LOW;
 
 
 const Servo motors[NUM_MOTORS];
-int currentPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // current motor power
-int motorPower[NUM_MOTORS] = {0, 0, 0, 0, 0, 0}; // desired motor power
+// current motor power, value between 1075 and 1875
+int currentPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
+// desired motor power, value between 1075 and 1875
+int motorPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
 
 
 // Counter for sensor iteration
@@ -116,7 +110,10 @@ void setup() {
     for (int i = 0; i < NUM_MOTORS; i++) {
         pinMode(MOTOR_PORTS[i], OUTPUT);
         motors[i].attach(MOTOR_PORTS[i]);
+        motors[i].writeMicroseconds(1475);
     }
+    
+    delay(3000) // Part of motor initialization routine
 
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
@@ -126,8 +123,8 @@ void setup() {
 
 
 void loop() {
-    // packets are 5 bytes each
-    while (Serial.available() >= 5) {
+    // packets are 4 bytes each
+    while (Serial.available() >= 4) {
         readSerial();
     }
 
@@ -148,26 +145,25 @@ void readSerial() {
             Serial.write(HEADER_KEY_OUT_2);
             Serial.write(HEADER_KEY_PING);
             Serial.write(Serial.read());
-            Serial.read();
         } else if (specialKey == HEADER_KEY_LIGHT) {
             // if the LED is off turn it on and vice-versa:
             ledState = !ledState;
             // set the LED with the ledState of the variable:
             digitalWrite(LED_PIN, ledState);
-            Serial.read(); Serial.read(); Serial.read();
+            Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_PNEUMATICS) {
             // if the Pneumatics claw is off turn it on and vice-versa:
             pneumaticState = !pneumaticState;
             // set the Pneumatics claw with the ledState of the variable:
             digitalWrite(PNEUMATIC_PIN, pneumaticState);
-            Serial.read(); Serial.read(); Serial.read();
+            Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_HOLD_ON) {
             desiredCompass = readCompass();
             hold = true;
-            Serial.read(); Serial.read(); Serial.read();
+            Serial.read(); Serial.read();
         } else if (specialKey == HEADER_KEY_HOLD_OFF) {
             hold = false;
-            Serial.read(); Serial.read(); Serial.read();
+            Serial.read(); Serial.read();
         } else {
             readMotorValues();
         }
@@ -178,15 +174,8 @@ void readSerial() {
 void readMotorValues() {
     int motorNum = Serial.read();
     int motorPow = Serial.read();
-    int motorDir = Serial.read();
-
-    // stores the read motorPow and motorDir as the targetted motor power [-255, 255]
-    if (motorDir == READ_BACKWARD) {
-        motorPower[motorNum] = -1 * motorPow;
-    }
-    else if (motorDir == READ_FORWARD) {
-        motorPower[motorNum] = motorPow;
-    }
+    
+    motorPower[motorNum] = motorPow;
 }
 
 
@@ -198,9 +187,7 @@ void motorControl() {
         // updates motor power in the direction of desired power
         currentPower[i] = getNewPower(i);
 
-        // convert back to motor readable output
         int motorPow = currentPower[i];
-        motorPow = motorPow / 256 * 200 + 1474;
         
         motors[i].writeMicroseconds(motorPow);
     }
@@ -216,7 +203,7 @@ int getNewPower(int motorNum) {
     int v = delta / ACCELERATION;
     if (v == 0) return currentPower[motorNum] + abs(delta) / delta;
 
-    return min(max(currentPower[motorNum] + v, 0), 255);
+    return min(max(currentPower[motorNum] + v, 1075), 1875);
 }
 
 
