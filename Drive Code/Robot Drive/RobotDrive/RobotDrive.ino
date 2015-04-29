@@ -17,7 +17,7 @@
 
 #include <Servo.h>
 #include <Wire.h>
-#include <LSM303.h>
+//#include <LSM303.h>
 
 
 const int NUM_MOTORS = 6;
@@ -82,7 +82,7 @@ int ledState = LOW;
 int pneumaticState = LOW;
 
 
-const Servo motors[NUM_MOTORS];
+Servo motors[NUM_MOTORS];
 // current motor power, value between 1075 and 1875
 int currentPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
 // desired motor power, value between 1075 and 1875
@@ -92,7 +92,7 @@ int motorPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
 // Counter for sensor iteration
 int sensorLoopCounter = 0;
 
-LSM303 compass; // compass object
+//LSM303 compass; // compass object
 
 
 
@@ -102,10 +102,10 @@ void setup() {
 
     // initialize the compass
     Wire.begin();
-    compass.init();
-    compass.enableDefault();
-    compass.m_min = (LSM303::vector<int16_t>) {-479, -643, -476};
-    compass.m_max = (LSM303::vector<int16_t>) {+607, +524, +609};
+//    compass.init();
+//    compass.enableDefault();
+//    compass.m_min = (LSM303::vector<int16_t>) {-479, -643, -476};
+//    compass.m_max = (LSM303::vector<int16_t>) {+607, +524, +609};
 
     for (int i = 0; i < NUM_MOTORS; i++) {
         pinMode(MOTOR_PORTS[i], OUTPUT);
@@ -113,7 +113,7 @@ void setup() {
         motors[i].writeMicroseconds(1475);
     }
     
-    delay(3000) // Part of motor initialization routine
+    delay(3000); // Part of motor initialization routine
 
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
@@ -236,9 +236,10 @@ void adjustAngle() {
 
 // reads compass value, return a value between 0 and 360 (counter-clockwise increase)
 int readCompass() {
-    compass.read();
-    float heading = 360 - compass.heading();
-    return min(max((int)heading, 0), 360);
+//    compass.read();
+//    float heading = 360 - compass.heading();
+//    return min(max((int)heading, 0), 360);
+      return 0;
 }
 
 
