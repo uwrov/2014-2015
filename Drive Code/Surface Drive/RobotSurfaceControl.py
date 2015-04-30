@@ -39,6 +39,8 @@ MOTOR_VARIATION = 400
 DISPLAY_SCALE = 4
 
 # Image
+cam1 = None
+cam2 = None
 IMAGE_SIZE = [480, 640]
 image = numpy.zeros((IMAGE_SIZE[0] * 2, IMAGE_SIZE[1], 3), numpy.uint8)
 
@@ -59,14 +61,19 @@ image = numpy.zeros((IMAGE_SIZE[0] * 2, IMAGE_SIZE[1], 3), numpy.uint8)
 # Returns 1 if an error occured during serial connection, 0 otherwise
 def setup(serialPort):
 	global ser
+	global cam1, cam2
 
 	ser = Serial(serialPort)
 	if ser == None:
-		print "Error: Did not connect"
+		print "Error: Serial did not connect"
 		return 1
 
 	cam1 = cv2.VideoCapture(0)
 	cam2 = cv2.VideoCapture(1)
+	if cam1 == None or cam2 == None:
+		print "Error: Camera did not connect"
+		return 2
+		
 	cam1.set(3, IMAGE_SIZE[0])
 	cam1.set(4, IMAGE_SIZE[1])
 	cam2.set(3, IMAGE_SIZE[0])
