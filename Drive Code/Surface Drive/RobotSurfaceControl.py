@@ -208,8 +208,8 @@ def getImage(imageType):
 		return img2
 	elif imageType == 3:
 		# Add images to blank image, puts 2 images onto 1 frame
-		image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
-		image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = image2
+		image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = img1
+		image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = img2
 		return image
 	else:
 		print "getImage: imageType" + str(imageType) + "is not a valid image type"
