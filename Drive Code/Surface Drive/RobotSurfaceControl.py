@@ -58,7 +58,9 @@ image = numpy.zeros((IMAGE_SIZE[0] * 2, IMAGE_SIZE[1], 3), numpy.uint8)
 
 # Set up serial communication and cameras, and start data reading thread
 # Run this once program begins
-# Returns 1 if an error occured during serial connection, 0 otherwise
+# Returns 1 if an error occured during serial connection 
+# Returns 2 if an error occured during camera connection
+# Returns 0 otherwise
 def setup(serialPort):
 	global ser
 	global cam1, cam2
@@ -73,12 +75,13 @@ def setup(serialPort):
 	if cam1 == None or cam2 == None:
 		print "Error: Camera did not connect"
 		return 2
-		
+
 	cam1.set(3, IMAGE_SIZE[0])
 	cam1.set(4, IMAGE_SIZE[1])
 	cam2.set(3, IMAGE_SIZE[0])
 	cam2.set(4, IMAGE_SIZE[1])
 
+	print ser
 	start_new_thread(__updateData__, ())
 	return 0
 
@@ -95,12 +98,12 @@ def __updateData__():
 		sleep(WAIT_TIME)
 		
 		# Calculate motor values for Arduino
-		frontLeftPow = motors[1] * DISPLAY_SCALE + MOTOR_REST_POSITION
-		frontRightPow = motors[2] * DISPLAY_SCALE + MOTOR_REST_POSITION
-		backRightPow = motors[3] * DISPLAY_SCALE + MOTOR_REST_POSITION
-		backLeftPow = motors[4] * DISPLAY_SCALE + MOTOR_REST_POSITION
-		zFrontPow = motors[5] * DISPLAY_SCALE + MOTOR_REST_POSITION
-		zBackPow = motors[6] * DISPLAY_SCALE + MOTOR_REST_POSITION
+		frontLeftPow = motors[1] + 127
+		frontRightPow = motors[2] + 127
+		backRightPow = motors[3] + 127
+		backLeftPow = motors[4] + 127
+		zFrontPow = motors[5] + 127
+		zBackPow = motors[6] + 127
 
 		# Write motor values to the Arduino
 		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0,
@@ -139,12 +142,14 @@ def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	__setMotorTranslate__(xSpeed, ySpeed)
 	__setMotorRotation__(rotation)
 
+	print motors
+
 
 # Set the speed of the z direction (up/down) motors
 def __setZ__(zSpeed):
 	global motors
 
-	zPow = int(zSpeed * MOTOR_VARIATION / DISPLAY_SCALE)
+	zPow = int(zSpeed * 127)
 	motors[5] = zPow
 	motors[6] = zPow
 
@@ -183,21 +188,32 @@ def __setMotorRotation__(rotation):
 		backRightPow /= maxPow
 		backLeftPow /= maxPow
 
-	motors[1] = int(frontLeftPow * MOTOR_VARIATION / DISPLAY_SCALE)
-	motors[2] = int(frontRightPow * MOTOR_VARIATION / DISPLAY_SCALE)
-	motors[3] = int(backRightPow * MOTOR_VARIATION / DISPLAY_SCALE)
-	motors[4] = int(backLeftPow * MOTOR_VARIATION / DISPLAY_SCALE)
+	motors[1] = int(frontLeftPow * 127)
+	motors[2] = int(frontRightPow * 127)
+	motors[3] = int(backRightPow * 127)
+	motors[4] = int(backLeftPow * 127)
 
 
 # Return the latest image from the camera
-def getImage():
+# Image type 1 returns the image from camera 1
+# Image type 2 returns the image from camera 2
+# Image type 3 returns both images stacked vertically
+def getImage(imageType):
 	ret1, img1 = cam1.read()
 	ret2, img2 = cam2.read()
 
-	# Add images to blank image, puts 2 images onto 1 frame
-	image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
-	image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = image2
-	return image
+	if imageType == 1:
+		return img1
+	elif imageType == 2:
+		return img2
+	elif imageType == 3:
+		# Add images to blank image, puts 2 images onto 1 frame
+		image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = image1
+		image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = image2
+		return image
+	else:
+		print "getImage: imageType" + str(imageType) + "is not a valid image type"
+		return None
 
 
 # Release the cameras being used
