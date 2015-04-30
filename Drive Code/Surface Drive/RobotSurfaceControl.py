@@ -34,9 +34,7 @@ sensors = {sensor1Name : 0, sensor2Name : 0}
 motors = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
 
 ROTATION_SCALE = 0.5
-MOTOR_REST_POSITION = 1475
-MOTOR_VARIATION = 400
-DISPLAY_SCALE = 4
+MOTOR_ANGLE = math.sqrt(2) / 2
 
 # Image
 cam1 = None
@@ -157,15 +155,15 @@ def __setZ__(zSpeed):
 # Set the speed of the x/y direction (up/down/left/right) motors
 def __setMotorTranslate__(xSpeed, ySpeed):
 	# Translate x/y coordinate values to motor coordinate values
-	m1 = .5 * xSpeed + ySpeed / (2 * math.sqrt(3))
-	m2 = -.5 * xSpeed + ySpeed / (2 * math.sqrt(3))
+	m1 = MOTOR_ANGLE * xSpeed + MOTOR_ANGLE * ySpeed
+	m2 = MOTOR_ANGLE * ySpeed - MOTOR_ANGLE * xSpeed
 
 	# Don't normalize values if both are 0
 	if m1 == 0 and m2 == 0:
 		motors[1] = motors[2] = motors[3] = motors[4] = 0
 	else:
 		m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1)
-		m2_norm = m2 / abs(max(m1, m2)) *  min(math.hypot(xSpeed, ySpeed), 1)
+		m2_norm = m2 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1)
 		motors[1] = -m1_norm
 		motors[2] = -m2_norm
 		motors[3] = m1_norm
