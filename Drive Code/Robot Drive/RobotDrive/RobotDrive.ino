@@ -174,6 +174,8 @@ void readSerial() {
 void readMotorValues() {
     int motorNum = Serial.read();
     int motorPow = Serial.read();
+
+    motorPow = (int)((float)motorPow * (800. / 254.) + 1075.);
     
     motorPower[motorNum] = motorPow;
 }
