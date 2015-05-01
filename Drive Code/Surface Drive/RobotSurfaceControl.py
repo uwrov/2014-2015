@@ -66,13 +66,13 @@ def setup(serialPort):
 
 	ser = Serial(serialPort)
 	if ser == None:
-		print "Error: Serial did not connect"
+		print "setup: Serial " + str(serialPort) + " did not connect"
 		return 1
 
 	cam1 = cv2.VideoCapture(0)
 	cam2 = cv2.VideoCapture(1)
 	if cam1 == None or cam2 == None:
-		print "Error: Camera did not connect"
+		print "setup: Camera did not connect"
 		return 2
 
 	cam1.set(3, IMAGE_SIZE[0])
@@ -116,8 +116,6 @@ def __updateData__():
 # Set the motor speeds based on the given joystick values
 # Joystick values range between -1 and 1
 def setMotors(xSpeed, ySpeed, zSpeed, rotation):
-	global motors
-
 	__setZ__(zSpeed)
 	m1, m2 = __getMotorTranslate__(xSpeed, ySpeed)
 	__setMotorRotation__(rotation, m1, m2)
@@ -187,13 +185,14 @@ def getImage(imageType):
 		image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = img2
 		return image
 	else:
-		print "getImage: imageType" + str(imageType) + "is not a valid image type"
+		print "getImage: imageType " + str(imageType) + " is not a valid image type"
 		return None
 
 
-# Release the cameras being used
+# Release the cameras and serial being used
 # Run once program ends
-def releaseCamera():
+def close():
+	ser.close()
 	cam1.release()
 	cam2.release()
 	cv2.destroyAllWindows()
