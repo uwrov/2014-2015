@@ -30,11 +30,12 @@ sensor2Name = 1
 sensors = {sensor1Name : 0, sensor2Name : 0}
 
 # Motor values sent to Arduino
-# Stores values between -100 and 100
+# Stores values between 0 and 254
 motors = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
 
 ROTATION_SCALE = 0.5
 MOTOR_ANGLE = math.sqrt(2) / 2
+SCALE = 127
 
 # Image
 cam1 = None
@@ -79,7 +80,6 @@ def setup(serialPort):
 	cam2.set(3, IMAGE_SIZE[0])
 	cam2.set(4, IMAGE_SIZE[1])
 
-	print ser
 	start_new_thread(__updateData__, ())
 	return 0
 
@@ -94,28 +94,10 @@ def __updateData__():
 
 	while True:
 		sleep(WAIT_TIME)
-		
-		# Calculate motor values for Arduino
-		frontLeftPow = motors[1] + 127
-		frontRightPow = motors[2] + 127
-		backRightPow = motors[3] + 127
-		backLeftPow = motors[4] + 127
-		zFrontPow = motors[5] + 127
-		zBackPow = motors[6] + 127
 
 		# Write motor values to the Arduino
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0,
-			frontLeftPow])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 1,
-			frontRightPow])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 2,
-			backRightPow])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 3,
-			backLeftPow])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 4,
-			zFrontPow])
-		ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 5,
-			zBackPow])
+		for i in range(1, 7):
+			ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0, motors[i]])
 
 		# Check for new packets from Arduino
 		# Packets should be received in sets of 4 bytes
@@ -137,45 +119,40 @@ def setMotors(xSpeed, ySpeed, zSpeed, rotation):
 	global motors
 
 	__setZ__(zSpeed)
-	__setMotorTranslate__(xSpeed, ySpeed)
-	__setMotorRotation__(rotation)
-
-	print motors
+	m1, m2 = __getMotorTranslate__(xSpeed, ySpeed)
+	__setMotorRotation__(rotation, m1, m2)
 
 
 # Set the speed of the z direction (up/down) motors
 def __setZ__(zSpeed):
 	global motors
 
-	zPow = int(zSpeed * 127)
-	motors[5] = zPow
-	motors[6] = zPow
+	zPow = int(zSpeed * SCALE) + SCALE
+	motors[5] = motors[6] = zPow
 
 
 # Set the speed of the x/y direction (up/down/left/right) motors
-def __setMotorTranslate__(xSpeed, ySpeed):
+def __getMotorTranslate__(xSpeed, ySpeed):
 	# Translate x/y coordinate values to motor coordinate values
 	m1 = MOTOR_ANGLE * xSpeed + MOTOR_ANGLE * ySpeed
 	m2 = MOTOR_ANGLE * ySpeed - MOTOR_ANGLE * xSpeed
 
 	# Don't normalize values if both are 0
-	if m1 == 0 and m2 == 0:
-		motors[1] = motors[2] = motors[3] = motors[4] = 0
-	else:
+	m1_norm = m2_norm = 0
+	if m1 != 0 or m2 != 0:
 		m1_norm = m1 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1)
 		m2_norm = m2 / abs(max(m1, m2)) * min(math.hypot(xSpeed, ySpeed), 1)
-		motors[1] = -m1_norm
-		motors[2] = -m2_norm
-		motors[3] = m1_norm
-		motors[4] = m2_norm
+	return [m1_norm, m2_norm]
 
 
 # Add the speed of rotation to the motor speeds
-def __setMotorRotation__(rotation):
-	frontLeftPow = motors[1] - ROTATION_SCALE * rotation
-	frontRightPow = motors[2] + ROTATION_SCALE * rotation
-	backRightPow = motors[3] - ROTATION_SCALE * rotation
-	backLeftPow = motors[4] + ROTATION_SCALE * rotation
+def __setMotorRotation__(rotation, m1, m2):
+	global motors
+
+	frontLeftPow = -m1 - ROTATION_SCALE * rotation
+	frontRightPow = -m2 + ROTATION_SCALE * rotation
+	backRightPow = m1 - ROTATION_SCALE * rotation
+	backLeftPow = m2 + ROTATION_SCALE * rotation
 
 	# Normalize the values if greater than 1
 	maxPow = max(abs(frontLeftPow), abs(frontRightPow),
@@ -186,10 +163,10 @@ def __setMotorRotation__(rotation):
 		backRightPow /= maxPow
 		backLeftPow /= maxPow
 
-	motors[1] = int(frontLeftPow * 127)
-	motors[2] = int(frontRightPow * 127)
-	motors[3] = int(backRightPow * 127)
-	motors[4] = int(backLeftPow * 127)
+	motors[1] = int(frontLeftPow * SCALE) + SCALE
+	motors[2] = int(frontRightPow * SCALE) + SCALE
+	motors[3] = int(backRightPow * SCALE) + SCALE
+	motors[4] = int(backLeftPow * SCALE) + SCALE
 
 
 # Return the latest image from the camera
