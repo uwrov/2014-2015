@@ -88,7 +88,7 @@ class GuiPrint(object):
         self.line_height = 15
 
 def load_image(name):
-    path = os.path.join("", name)
+    path = os.path.join("images", name)
     try:
         image = pg.image.load(path)
     except pg.error, message:
