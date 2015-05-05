@@ -1,3 +1,5 @@
 Best place for all your python needs:
 
 www.lfd.uci.edu/~gohlke/pythonlibs
+
+To install whl files, do "pip install <name>.whl". pip should be installed with python 2.7.9 and later.
