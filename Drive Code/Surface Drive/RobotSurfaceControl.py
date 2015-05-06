@@ -23,6 +23,7 @@ pingTime = -1
 pingStartTime = 0
 
 WAIT_TIME = 0.1
+CONNECT_DELAY = 5
 
 # Sensor values received from Arduino
 sensor1Name = 0
@@ -80,6 +81,8 @@ def setup(serialPort):
 	cam2.set(3, IMAGE_SIZE[0])
 	cam2.set(4, IMAGE_SIZE[1])
 
+	sleep(CONNECT_DELAY)
+	
 	start_new_thread(__updateData__, ())
 	return 0
 
