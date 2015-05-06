@@ -99,8 +99,8 @@ def __updateData__():
 		sleep(WAIT_TIME)
 
 		# Write motor values to the Arduino
-		for i in range(1, 7):
-			ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, 0, motors[i]])
+		for i in range(0, 6):
+			ser.write([HEADER_KEY_OUT_1, HEADER_KEY_OUT_2, i, motors[i+1]])
 
 		# Check for new packets from Arduino
 		# Packets should be received in sets of 4 bytes
