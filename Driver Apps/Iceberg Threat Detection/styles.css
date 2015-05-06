@@ -1,3 +1,6 @@
 body {
 	text-align: center;
 }
+.col-xs-1 {
+	text-align: left;
+}
