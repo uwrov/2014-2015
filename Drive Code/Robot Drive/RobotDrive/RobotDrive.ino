@@ -108,7 +108,6 @@ void setup() {
 //    compass.m_max = (LSM303::vector<int16_t>) {+607, +524, +609};
 
     for (int i = 0; i < NUM_MOTORS; i++) {
-        pinMode(MOTOR_PORTS[i], OUTPUT);
         motors[i].attach(MOTOR_PORTS[i]);
         motors[i].writeMicroseconds(1475);
     }
