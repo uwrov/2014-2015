@@ -179,8 +179,10 @@ def getImage(imageType):
 	ret2, img2 = cam2.read()
 
 	if imageType == 1:
+		img1 = numpy.rot90(img1)
 		return img1
 	elif imageType == 2:
+		img2 = numpy.rot90(img2)
 		return img2
 	elif imageType == 3:
 		# Add images to blank image, puts 2 images onto 1 frame
