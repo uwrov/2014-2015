@@ -64,60 +64,83 @@
 		<tr>
 			<th>  </th>
 			<th><div class="col-xs-3">Count</div></th>
-			<td>0</td>
-			<td>0</td>
-			<td>0</td>
-			<td>0</td>
-			<td>0</td>
-			<td>0</td>
-			<td>0</td>
+			<td id="bat">0</td>
+			<td id="blood">0</td>
+			<td id="purple">0</td>
+			<td id="rainbow">0</td>
+			<td id="gunpowder">0</td>
+			<td id="mottled">0</td>
+			<td id="striped">0</td>
 		</tr>
 		<tr>
 			<th>  </th>
 			<th>  </th>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+  				<input type="number" name="quantity" min="0" max="25" id="input1" 
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit1').click()">
+  				<input type="submit" onclick="updateCountBat()" id="submit1">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input2"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit2').click()">
+  				<input type="submit" onclick="updateCountBlood()" id="submit2">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input3"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit3').click()">
+  				<input type="submit" onclick="updateCountPurple()" id="submit3">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input4"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit4').click()">
+  				<input type="submit" onclick="updateCountRainbow()" id="submit4">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input5"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit5').click()">
+  				<input type="submit" onclick="updateCountGunpowder()" id="submit5">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input6"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit6').click()">
+  				<input type="submit" onclick="updateCountMottled()" id="submit6">
 			</td>
 			<td>
-				<form action="action_page.php">
-	  				<input type="number" name="quantity" min="1" max="25">
-	  				<input type="submit">
-				</form>
+				<input type="number" name="quantity" min="0" max="25" id="input7"
+  				onkeydown="if (event.keyCode == 13) document.getElementById('submit7').click()">
+  				<input type="submit" onclick="updateCountStriped()" id="submit7">
 			</td>
 		</tr>
 	</table>
+	<script type="text/javascript">
+		function updateCountBat() {
+			var x = document.getElementById("input1").value;
+			document.getElementById("bat").innerHTML = x;
+		}
+		function updateCountBlood() {
+			var x = document.getElementById("input2").value;
+			document.getElementById("blood").innerHTML = x;
+		}
+		function updateCountPurple() {
+			var x = document.getElementById("input3").value;
+			document.getElementById("purple").innerHTML = x;
+		}
+		function updateCountRainbow() {
+			var x = document.getElementById("input4").value;
+			document.getElementById("rainbow").innerHTML = x;
+		}
+		function updateCountGunpowder() {
+			var x = document.getElementById("input5").value;
+			document.getElementById("gunpowder").innerHTML = x;
+		}
+		function updateCountMottled() {
+			var x = document.getElementById("input6").value;
+			document.getElementById("mottled").innerHTML = x;
+		}
+		function updateCountStriped() {
+			var x = document.getElementById("input7").value;
+			document.getElementById("striped").innerHTML = x;
+		}
+	</script>
 </body>
 </html>
