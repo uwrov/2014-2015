@@ -333,6 +333,7 @@ def main():
 
         if (hasSignal):
             frame=rc.getImage(1)
+            frame=pg.surfarray.make_surface(frame)
             screen=blitCamFrame(frame,screen)
         else:
             displayNoSignal(screen)
