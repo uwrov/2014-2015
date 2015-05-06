@@ -1,7 +1,6 @@
-import cv2, math, os
+import math, os
 import RobotSurfaceControl as rc
-#import os
-#os.environ['PYGAME_FREETYPE'] = '1'
+import eztext
 import pygame as pg
 import numpy
 
@@ -19,6 +18,7 @@ RED      = ( 255,   0,   0)
 PURPLE = (51, 0, 111)
 GOLD = (145,123,76)
 GREY = (216, 217, 218)
+DARK_GREY = (153, 153, 153)
 
 THRESHOLD = 0.15
 
@@ -28,17 +28,21 @@ hasSignal = False
 
 emergency = False
 
-camera_index = 3
-camera=cv2.VideoCapture(camera_index)
-if(camera.isOpened()):  
+error = 1
+
+useJoy = False
+
+error = rc.setup("COM4")
+
+
+if(error == 0):  
     hasSignal = True
     print "Camera connected "
+hasSignal = False
 
-camera.set(3, 480)
-camera.set(4, 640)
 
 SCREEN_SIZE = (1180, 520)
-CAM_VIEW_SIZE = (320, 180)
+
 
 x = 0;
 y = 0;
@@ -60,32 +64,12 @@ R_BUTTON = 5
 BACK_BUTTON = 6
 START_BUTTON = 7
 
-font = pg.font.SysFont("encodesansnormalblack",  SCREEN_SIZE[0] / 50)
+font = pg.font.SysFont("encodesansnormalblack",  SCREEN_SIZE[0] / 60)
 
-font_small = pg.font.SysFont("opensanssemibold", SCREEN_SIZE[0] / 50)
+font_small = pg.font.SysFont("opensanssemibold", SCREEN_SIZE[0] / 60)
+font_panel = pg.font.SysFont("calibri", SCREEN_SIZE[0] / 60)
 #font_small = pg.font.SysFont("opensans", SCREEN_SIZE[0] / 50)
 
-
-class GuiPrint(object):
-
-    def __init__(self):
-        self.reset()
-        self.x_pos = 50
-        self.y_pos = 50
-        self.line_height = 15
-        self.font = pg.font.Font(None, 20)
- 
-    def out(self, my_screen, text_string):
-        """ Draw text onto the screen. """
-        text_bitmap = self.font.render(text_string, True, BLACK)
-        my_screen.blit(text_bitmap, [self.x_pos, self.y_pos])
-        self.y_pos += self.line_height
-		
-    def reset(self):
-        """ Reset text to the top of the screen. """
-        self.x_pos = 700
-        self.y_pos = 10
-        self.line_height = 15
 
 def load_image(name):
     path = os.path.join("images", name)
@@ -106,10 +90,11 @@ def joy_init():
         print "joy_init: No joysticks connected"
         useJoy = False
         return
-    joystick = pg.joystick.Joystick(0)
-    joystick.init()
-
-    return joystick
+    else:
+        useJoy = True
+        joystick = pg.joystick.Joystick(0)
+        joystick.init()
+        return joystick
 
 
 def update_values():
@@ -131,21 +116,10 @@ def update_values():
         keepValuesAtZero()
        
 
-def getCamFrame(camera):
-    retval,frame=camera.read()
-    frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-    frame=numpy.rot90(frame)
-    frame=pg.surfarray.make_surface(frame)
-    return frame
-
 def displayNoSignal(screen):
     pg.draw.rect(screen, BLACK, [SCREEN_SIZE[0] / 40, SCREEN_SIZE[1] / 5, SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2])
     text = font.render("No Signal", True, WHITE)
     screen.blit(text, (SCREEN_SIZE[0]/4  - text.get_rect().width/2, SCREEN_SIZE[1]/4 - text.get_rect().height/2))
-
-def setCamDimensions():
-    camera.set(3, SCREEN_SIZE[0]/2)
-    camera.set(4, SCREEN_SIZE[1]/2)
 
 def blitCamFrame(frame,screen):
     screen.blit(frame,([SCREEN_SIZE[0] / 40, SCREEN_SIZE[1] / 5, SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2]))
@@ -202,7 +176,21 @@ def drawDirModule(screen, origin_x, origin_y, size):
     drawHorizontalBar(screen, origin_x, origin_y + size * 4.0, size * 2, size / 3, x_offset, "X Offset")
     drawHorizontalBar(screen, origin_x, origin_y + size * 4.75, size * 2, size / 3, y_offset, "Y Offset")
     drawHorizontalBar(screen, origin_x, origin_y + size * 5.5, size * 2, size / 3, z_offset, "Z Offset")
-    drawHorizontalBar(screen, origin_x, origin_y + size * 6.25, size * 2, size / 3, rotation_offset, "Rotation Offset")
+    txtbx = eztext.Input(maxlength=5, color=(255,0,0), prompt='type here: ')
+    #drawHorizontalBar(screen, origin_x, origin_y + size * 6.25, size * 2, size / 3, rotation_offset, "Rotation Offset")
+    #drawConnections(screen, origin_x, origin_y + size * 6.25, size * 2, size / 3, z_offset, "Joystick")
+
+def drawInputs(screen):
+    #drawConnections(screen, , origin_y + size * 6.25, size * 2, size / 3, z_offset, "Joystick")
+    local_x_origin = SCREEN_SIZE[0] / 40
+    local_y_origin = SCREEN_SIZE[1] - SCREEN_SIZE[1] / 10
+    local_width = SCREEN_SIZE[0] / 8
+    local_height = SCREEN_SIZE[1] / 12
+    #drawConnections(screen, 50, local_y_origin, local_width, local_height, x, "Joystick")
+    drawConnections(screen, local_x_origin + local_width  * 1.5, local_y_origin, local_width, local_height, hasSignal, "Arduino")
+    drawConnections(screen, local_x_origin + local_width  * 3, local_y_origin, local_width, local_height, hasSignal, "Camera")
+    drawConnections(screen, local_x_origin, local_y_origin, local_width, local_height, useJoy, "Joystick")
+
 
  
 def drawRotation(screen, origin_x, origin_y, width, height):
@@ -242,9 +230,9 @@ def drawSpeed(screen, origin_x, origin_y, width, height):
         screen.blit(text, (origin_x + width / 2 - text.get_rect().width/2, origin_y + height / 2 - text.get_rect().height/2))
 
 def drawGraphics(screen):
-    banner = load_image("boundlessband.png").convert()
+    banner = load_image("uwrovlogo.png").convert()
     size = banner.get_rect().size
-    banner = pg.transform.scale(banner, (size[0] * SCREEN_SIZE[0] / 2000 , size[1] * SCREEN_SIZE[0] / 2000))
+    banner = pg.transform.scale(banner, (size[0] * SCREEN_SIZE[0] / 3000 , size[1] * SCREEN_SIZE[0] / 3000))
     screen.blit(banner, (0, 0))
 
 
@@ -255,8 +243,13 @@ def exectueEmergency(screen):
 
 def drawConnections(screen, origin_x, origin_y, width, height, value, text):
     pg.draw.rect(screen, BLACK, [origin_x, origin_y, width, height], 2)
-    text = font_small.render(text, True, BLACK)
-    screen.blit(text, (origin_x + width/2  - text.get_rect().width/2, origin_y - text.get_rect().height/2 - height / 2))
+    if (value):
+        color = PURPLE
+    else:
+        color = DARK_GREY
+    pg.draw.ellipse(screen, color, [origin_x + width - width / 4, origin_y + height/8, height * 0.75,  height * 0.75])
+    text = font_panel.render(text, True, BLACK)
+    screen.blit(text, (origin_x + width / 16, origin_y + height / 2 - text.get_rect().height/2))
 
 
 
@@ -281,21 +274,18 @@ def main():
     screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
     pg.display.set_caption("Drive GUI")
     
-    guiPrint = GuiPrint()
+    
     clock = pg.time.Clock()
 	
     done = False
 	
-    #rc.setup("COM4")
-    #cv2.imshow('frame', rc.getImage())
-
 
     while not done:
         for event in pg.event.get():
             if event.type == pg.VIDEORESIZE:
                 SCREEN_SIZE = event.size
                 screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
-                setCamDimensions()
+                #setCamDimensions()
                 font = pg.font.SysFont("encodesansnormalblack",  SCREEN_SIZE[0] / 50)
                 font_small = pg.font.SysFont(None, SCREEN_SIZE[0] / 50)
             if event.type == pg.JOYHATMOTION:
@@ -313,15 +303,15 @@ def main():
                     print ""
                 if event.dict['button'] == Y_BUTTON:
                     print ""
-                #text = font.render(str(event.__dict__), True, BLACK)
-                #screen.blit(text, (0,0))
 
             if event.type == pg.QUIT:
 				done = True
         
+        """
         if (joystick.get_button(BACK_BUTTON) == True and joystick.get_button(START_BUTTON) == True):
             done = True
             emergency = True
+        """
         
         if (emergency == True):
             exectueEmergency(screen)
@@ -330,39 +320,26 @@ def main():
         # limit to 30 fps
         clock.tick(30)
 
-        guiPrint.reset()
         screen.fill(GREY)
         
         update_values()
 
-        #rc.setMotors(x, y, z, rotation)
+        rc.setMotors(x, y, z, rotation)
 
-        #drawDirection(screen, 850, 150, 100)
-        #drawSpeed(screen, 1075, 150, 50, 200)
-        #drawDirModule(screen, 700, 100, 100)
         drawGraphics(screen)
         drawDirModule(screen, SCREEN_SIZE[0] / 1.5, SCREEN_SIZE[1] / 10, SCREEN_SIZE[0] / 15)
-        #drawDepth(screen, 1050, 100, 50, 350)
-        #drawRotation(screen, 700, 400, 300, 50)
+        drawInputs(screen)
 
 
-        """
-        buttons = joystick.get_numbuttons()
- 
-        for i in range(buttons):
-            button = joystick.get_button(i)
-            guiPrint.out(screen, "Button {:>2} value: {}".format(i, button))
-        """
         if (hasSignal):
-            frame=getCamFrame(camera)
+            frame=rc.getImage(1)
             screen=blitCamFrame(frame,screen)
         else:
             displayNoSignal(screen)
         pg.display.flip()
 
-useJoy = False
 
 main()
 
-
+rc.close()
 pg.quit()
