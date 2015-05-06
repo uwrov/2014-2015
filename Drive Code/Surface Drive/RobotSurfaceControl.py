@@ -31,7 +31,7 @@ sensors = {sensor1Name : 0, sensor2Name : 0}
 
 # Motor values sent to Arduino
 # Stores values between 0 and 254
-motors = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+motors = {1: 127, 2: 127, 3: 127, 4: 127, 5: 127, 6: 127}
 
 ROTATION_SCALE = 0.5
 MOTOR_ANGLE = math.sqrt(2) / 2
