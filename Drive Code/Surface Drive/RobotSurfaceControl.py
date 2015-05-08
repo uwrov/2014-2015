@@ -41,7 +41,7 @@ SCALE = 127
 # Image
 cam1 = None
 cam2 = None
-IMAGE_SIZE = [480, 640]
+IMAGE_SIZE = [1024, 576]
 image = numpy.zeros((IMAGE_SIZE[0] * 2, IMAGE_SIZE[1], 3), numpy.uint8)
 
 # THE BOT
@@ -71,15 +71,15 @@ def setup(serialPort):
 		return 1
 
 	cam1 = cv2.VideoCapture(0)
-	cam2 = cv2.VideoCapture(1)
-	if cam1 == None or cam2 == None:
+	# cam2 = cv2.VideoCapture(1)
+	if cam1 == None:# or cam2 == None:
 		print "setup: Camera did not connect"
 		return 2
 
 	cam1.set(3, IMAGE_SIZE[0])
 	cam1.set(4, IMAGE_SIZE[1])
-	cam2.set(3, IMAGE_SIZE[0])
-	cam2.set(4, IMAGE_SIZE[1])
+	# cam2.set(3, IMAGE_SIZE[0])
+	# cam2.set(4, IMAGE_SIZE[1])
 
 	sleep(CONNECT_DELAY)
 	
@@ -175,20 +175,27 @@ def __setMotorRotation__(rotation, m1, m2):
 # Image type 2 returns the image from camera 2
 # Image type 3 returns both images stacked vertically
 def getImage(imageType):
-	ret1, img1 = cam1.read()
-	ret2, img2 = cam2.read()
+	cam1.grab()
+	_, img1 = cam1.retrieve()
+
+	# cam2.grab()
+	# _, img2 = cam2.retrieve()
 
 	if imageType == 1:
 		img1 = numpy.rot90(img1)
+		img1 = img1[::-1, :,]
+		img1[:,:,[0,2]] = img1[:,:,[2, 0]]
 		return img1
-	elif imageType == 2:
-		img2 = numpy.rot90(img2)
-		return img2
-	elif imageType == 3:
-		# Add images to blank image, puts 2 images onto 1 frame
-		image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = img1
-		image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = img2
-		return image
+	# elif imageType == 2:
+	# 	# img2 = numpy.rot90(img2)
+	# 	# return img2
+	# 	pass
+	# elif imageType == 3:
+	# 	# Add images to blank image, puts 2 images onto 1 frame
+	# 	# image[0 : IMAGE_SIZE[0], 0 : IMAGE_SIZE[1]] = img1
+	# 	# image[IMAGE_SIZE[0] : IMAGE_SIZE[0] * 2, 0 : IMAGE_SIZE[1]] = img2
+	# 	# return image
+	# 	pass
 	else:
 		print "getImage: imageType " + str(imageType) + " is not a valid image type"
 		return None
@@ -199,7 +206,7 @@ def getImage(imageType):
 def close():
 	ser.close()
 	cam1.release()
-	cam2.release()
+	# cam2.release()
 	cv2.destroyAllWindows()
 
 
