@@ -1,6 +1,6 @@
-import math, os
+import math, os, sys
 import RobotSurfaceControl as rc
-import eztext
+#import eztext
 import pygame as pg
 import numpy
 
@@ -28,17 +28,21 @@ hasSignal = False
 
 emergency = False
 
-error = 1
+error = 0
 
 useJoy = False
 
-error = rc.setup("COM4")
+port = "COM4"
+
+if len(sys.argv) > 1:
+    port = sys.argv[1]
+
+error = rc.setup(port)
 
 
 if(error == 0):  
     hasSignal = True
     print "Camera connected "
-hasSignal = False
 
 
 SCREEN_SIZE = (1180, 520)
@@ -101,13 +105,14 @@ def update_values():
     global x, y, z, speed, rotation, joystickEnabled
     if pg.joystick.get_count() == 0:
         joystickEnabled = False
-        x = float(pg.mouse.get_pos()[0]) / (SCREEN_SIZE[0]/2.0) - 1
-        y = 1 - float(pg.mouse.get_pos()[1]) / (SCREEN_SIZE[1]/2.0)
+        #x = float(pg.mouse.get_pos()[0]) / (SCREEN_SIZE[0]/2.0) - 1
+        #y = 1 - float(pg.mouse.get_pos()[1]) / (SCREEN_SIZE[1]/2.0)
     else:
         joystickEnabled = True
         x = joystick.get_axis(0) + x_offset
         y = -joystick.get_axis(1) + y_offset
-        z = joystick.get_axis(2)
+        z = joystick.get_axis(2) + z_offset
+        z = max(min(z, 1), -1)
         rotation = joystick.get_axis(4)
         if (pow((pow(x,2) + pow(y,2)),0.5) < 1):
             speed = pow((pow(x,2) + pow(y,2)),0.5)
@@ -122,7 +127,7 @@ def displayNoSignal(screen):
     screen.blit(text, (SCREEN_SIZE[0]/4  - text.get_rect().width/2, SCREEN_SIZE[1]/4 - text.get_rect().height/2))
 
 def blitCamFrame(frame,screen):
-    screen.blit(frame,([SCREEN_SIZE[0] / 40, SCREEN_SIZE[1] / 5, SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2]))
+    screen.blit(frame,([SCREEN_SIZE[0] / 10, SCREEN_SIZE[1] / 5, SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2]))
     return screen
 
 def getStringDir():
@@ -160,11 +165,11 @@ def drawDepth(screen, origin_x, origin_y, width, height):
     text = font.render("Depth", True, BLACK)
     screen.blit(text, (origin_x + width/2  - text.get_rect().width/2, origin_y - text.get_rect().height/2 - width / 2))
     if (z < 0):
-        pg.draw.rect(screen, GOLD, [origin_x, origin_y + height / 2, width, -z * (height / 2)])
+        pg.draw.rect(screen, PURPLE, [origin_x, origin_y + height / 2 - (-z * height / 2), width , -z * height / 2])
     if (z > 0):
-        pg.draw.rect(screen, PURPLE, [origin_x, origin_y + height / 2 - (z * height / 2), width , z * height / 2])
+        pg.draw.rect(screen, GOLD, [origin_x, origin_y + height / 2, width, z * (height / 2)])
     if (z != 0):
-        text = font.render(str(int(round(z * 10))), True, BLACK)
+        text = font.render(str(int(round(-z * 10))), True, BLACK)
         screen.blit(text, (origin_x + width / 2 - text.get_rect().width/2, origin_y + height / 2 - text.get_rect().height/2))
 
 def drawDirModule(screen, origin_x, origin_y, size):
@@ -176,7 +181,7 @@ def drawDirModule(screen, origin_x, origin_y, size):
     drawHorizontalBar(screen, origin_x, origin_y + size * 4.0, size * 2, size / 3, x_offset, "X Offset")
     drawHorizontalBar(screen, origin_x, origin_y + size * 4.75, size * 2, size / 3, y_offset, "Y Offset")
     drawHorizontalBar(screen, origin_x, origin_y + size * 5.5, size * 2, size / 3, z_offset, "Z Offset")
-    txtbx = eztext.Input(maxlength=5, color=(255,0,0), prompt='type here: ')
+    #txtbx = eztext.Input(maxlength=5, color=(255,0,0), prompt='type here: ')
     #drawHorizontalBar(screen, origin_x, origin_y + size * 6.25, size * 2, size / 3, rotation_offset, "Rotation Offset")
     #drawConnections(screen, origin_x, origin_y + size * 6.25, size * 2, size / 3, z_offset, "Joystick")
 
@@ -247,7 +252,7 @@ def drawConnections(screen, origin_x, origin_y, width, height, value, text):
         color = PURPLE
     else:
         color = DARK_GREY
-    pg.draw.ellipse(screen, color, [origin_x + width - width / 4, origin_y + height/8, height * 0.75,  height * 0.75])
+    pg.draw.ellipse(screen, color, [origin_x + width - width / 3, origin_y + height/8, height * 0.75,  height * 0.75])
     text = font_panel.render(text, True, BLACK)
     screen.blit(text, (origin_x + width / 16, origin_y + height / 2 - text.get_rect().height/2))
 
@@ -302,7 +307,9 @@ def main():
                 if event.dict['button'] == X_BUTTON:
                     print ""
                 if event.dict['button'] == Y_BUTTON:
-                    print ""
+                    z_offset -= ADJUSTMENT
+                if event.dict['button'] == A_BUTTON:
+                    z_offset += ADJUSTMENT
 
             if event.type == pg.QUIT:
 				done = True
@@ -330,11 +337,14 @@ def main():
         drawDirModule(screen, SCREEN_SIZE[0] / 1.5, SCREEN_SIZE[1] / 10, SCREEN_SIZE[0] / 15)
         drawInputs(screen)
 
-
+        
         if (hasSignal):
             frame=rc.getImage(1)
-            frame=pg.surfarray.make_surface(frame)
-            screen=blitCamFrame(frame,screen)
+            if frame == None:
+                displayNoSignal(screen)
+            else:
+                frame=pg.surfarray.make_surface(frame)
+                screen=blitCamFrame(frame,screen)
         else:
             displayNoSignal(screen)
         pg.display.flip()
