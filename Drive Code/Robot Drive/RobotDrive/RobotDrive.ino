@@ -69,9 +69,9 @@ const int SENSOR_PORTS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5};
 
 const int DELAY_COUNTER = 5; // delay each loop (ms)
 const int ACCELERATION = 8; // how fast motors change speed, lower means faster change
-const int ROTATE_SCALE = 6; // how fast to adjust rotation for holding position, lower is faster
+const int ROTATE_SCALE = 12; // how fast to adjust rotation for holding position, lower is faster
 const int SENSOR_ITERATION = 100000000;
-
+const int noCommShutDown = 200; // after 1s, shut down all motors
 
 
 // states
@@ -81,6 +81,7 @@ bool hold = false;
 int ledState = LOW;
 int pneumaticState = LOW;
 
+int noCommCounter = 0;
 
 Servo motors[NUM_MOTORS];
 // current motor power, value between 1075 and 1875
@@ -123,10 +124,20 @@ void setup() {
 
 void loop() {
     // packets are 4 bytes each
-    while (Serial.available() >= 4) {
-        readSerial();
+    if (Serial.available() == 0) {
+        noCommCounter++;
+    } else {
+        noCommCounter = 0;
+        while (Serial.available() >= 4) {
+            readSerial();
+        }
     }
-
+    if (noCommCounter >= noCommShutDown) {
+        for (int i = 0; i < NUM_MOTORS; i++) {
+            currentPower[i] = 1475;
+            motorPower[i] = 1475;
+        }
+    }
     motorControl();
     sendSensorData();
 
