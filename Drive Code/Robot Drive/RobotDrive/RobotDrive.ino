@@ -68,10 +68,12 @@ const int SENSOR_PORTS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5};
 // misc constants
 
 const int DELAY_COUNTER = 5; // delay each loop (ms)
-const int ACCELERATION = 8; // how fast motors change speed, lower means faster change
-const int ROTATE_SCALE = 6; // how fast to adjust rotation for holding position, lower is faster
+const int ACCELERATION = 16; // how fast motors change speed, lower means faster change
+const int ROTATE_SCALE = 12; // how fast to adjust rotation for holding position, lower is faster
 const int SENSOR_ITERATION = 100000000;
-
+const int MOTOR_ZERO = 1475; // value for still motors
+const int MOTOR_HALF_RANGE = 400; // motor range is MOTOR_ZERO +- MOTOR_HALF_RANGE
+const int SHUTDOWN_TIME = 1000; // how long to go without coms before turning off (ms)
 
 
 // states
@@ -81,12 +83,13 @@ bool hold = false;
 int ledState = LOW;
 int pneumaticState = LOW;
 
+int lastComm;
 
 Servo motors[NUM_MOTORS];
-// current motor power, value between 1075 and 1875
-int currentPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
-// desired motor power, value between 1075 and 1875
-int motorPower[NUM_MOTORS] = {1475, 1475, 1475, 1475, 1475, 1475};
+// current motor power, value between MOTOR_ZERO +- MOTOR_HALF_RANGE
+int currentPower[NUM_MOTORS] = {MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO};
+// desired motor power, value between MOTOR_ZERO +- MOTOR_HALF_RANGE
+int motorPower[NUM_MOTORS] = {MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO};
 
 
 // Counter for sensor iteration
@@ -109,13 +112,15 @@ void setup() {
 
     for (int i = 0; i < NUM_MOTORS; i++) {
         motors[i].attach(MOTOR_PORTS[i]);
-        motors[i].writeMicroseconds(1475);
+        motors[i].writeMicroseconds(MOTOR_ZERO);
     }
     
     delay(3000); // Part of motor initialization routine
 
     pinMode(PNEUMATIC_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
+
+    lastComm = millis();
 }
 
 
@@ -125,6 +130,12 @@ void loop() {
     // packets are 4 bytes each
     while (Serial.available() >= 4) {
         readSerial();
+        lastComm = millis();
+    }
+
+
+    if (millis() - lastComm > SHUTDOWN_TIME) {
+        zeroMotors();
     }
 
     motorControl();
@@ -175,7 +186,7 @@ void readMotorValues() {
     int motorPow = Serial.read();
     
     motorPow = 254 - motorPow;
-    motorPow = (int)((float)motorPow * (800. / 254.) + 1075.);
+    motorPow = (int)((float)motorPow * (2. * (float)MOTOR_HALF_RANGE / 254.) + (float)MOTOR_ZERO - (float)MOTOR_HALF_RANGE);
     
     motorPower[motorNum] = motorPow;
 }
@@ -205,7 +216,7 @@ int getNewPower(int motorNum) {
     int v = delta / ACCELERATION;
     if (v == 0) return currentPower[motorNum] + abs(delta) / delta;
 
-    return min(max(currentPower[motorNum] + v, 1075), 1875);
+    return min(max(currentPower[motorNum] + v, MOTOR_ZERO - MOTOR_HALF_RANGE), MOTOR_ZERO + MOTOR_HALF_RANGE);
 }
 
 
@@ -260,4 +271,11 @@ void rotateLeft(int amount) {
     motorPower[MOTOR_FT_RT] = (int)((float)motorPower[MOTOR_FT_RT] / scale);
     motorPower[MOTOR_BK_RT] = (int)((float)motorPower[MOTOR_BK_RT] / scale);
     motorPower[MOTOR_BK_LT] = (int)((float)motorPower[MOTOR_BK_LT] / scale);
+}
+
+// sets all motor values to MOTOR_ZERO
+void zeroMotors() {
+    for (int i = 0; i < NUM_MOTORS; i++) {
+        motorPower[i] = MOTOR_ZERO;
+    }
 }
