@@ -26,13 +26,11 @@ ADJUSTMENT = 0.05
 
 hasSignal = False
 
-emergency = False
-
 error = 0
 
 useJoy = False
 
-port = "COM4"
+port = "/dev/tty.usbmodemff11"
 
 if len(sys.argv) > 1:
     port = sys.argv[1]
@@ -273,7 +271,7 @@ def keepValuesAtZero():
   
 			
 def main():
-    global joystick, x, y, z, speed, rotation, x_offset, y_offset, z_offset, font, emergency, screen
+    global joystick, x, y, z, speed, rotation, x_offset, y_offset, z_offset, font, screen
     global SCREEN_SIZE
     joystick = joy_init()
     screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
@@ -283,7 +281,8 @@ def main():
     clock = pg.time.Clock()
 	
     done = False
-	
+    emergency = False
+	camView = 1
 
     while not done:
         for event in pg.event.get():
@@ -305,7 +304,9 @@ def main():
                 if event.dict['button'] == R_BUTTON:
                     z_offset -= ADJUSTMENT
                 if event.dict['button'] == X_BUTTON:
-                    print ""
+                    camView = 3 - camView
+                if event.dict['button'] == B_BUTTON:
+                    print "B pressed"
                 if event.dict['button'] == Y_BUTTON:
                     z_offset -= ADJUSTMENT
                 if event.dict['button'] == A_BUTTON:
@@ -316,7 +317,7 @@ def main():
         
         """
         if (joystick.get_button(BACK_BUTTON) == True and joystick.get_button(START_BUTTON) == True):
-            done = True
+            done = True 
             emergency = True
         """
         
@@ -326,12 +327,11 @@ def main():
 
         # limit to 30 fps
         clock.tick(30)
-
-        screen.fill(GREY)
         
         update_values()
-
         rc.setMotors(x, y, z, rotation)
+
+        screen.fill(GREY)
 
         drawGraphics(screen)
         drawDirModule(screen, SCREEN_SIZE[0] / 1.5, SCREEN_SIZE[1] / 10, SCREEN_SIZE[0] / 15)
@@ -339,14 +339,16 @@ def main():
 
         
         if (hasSignal):
-            frame=rc.getImage(1)
+            frame = rc.getImage(camView)
+
             if frame == None:
                 displayNoSignal(screen)
             else:
-                frame=pg.surfarray.make_surface(frame)
-                screen=blitCamFrame(frame,screen)
+                frame = pg.surfarray.make_surface(frame)
+                screen = blitCamFrame(frame,screen)
         else:
             displayNoSignal(screen)
+
         pg.display.flip()
 
 
