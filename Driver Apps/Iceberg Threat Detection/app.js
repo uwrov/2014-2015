@@ -67,27 +67,26 @@ $(document).ready(function(){
     ctx.drawImage(img, 0, 0);
 
     $("#image").click(function(){
-        var ctx = this.getContext("2d");
-        var img = $("#map")[0];
         ctx.clearRect(0, 0, this.width, this.height);
         ctx.drawImage(img, 0, 0);
-        ctx.rect(getLatitude() - 1, getLongitude() - 1, 3, 3);
         ctx.fillStyle = 'red';
-        ctx.fill();
-    })
-
-    $("#clr").click(function(){
-        var c = $("canvas#image")[0];
-        var ctx = c.getContext("2d");
-        var img = $("#map")[0];
-        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.fillRect(getLongitude() - 1, getLatitude() - 1, 3, 3);
     })
 
     function getLatitude() {
-        return $("#latitude").val();
+        //return $("#latitude").val();
+        var lat = $("#latitude").val();
+        var distance = Math.round(Math.abs(Number(lat) - 48.09) * 142.936288);
+        console.log(distance);
+        return distance;
     }
 
     function getLongitude() {
-        return $("#longitude").val();
+        //return $("#longitude").val();
+        var lon = $("#longitude").val();
+        console.log(lon);
+        var distance = Math.round(Math.abs(Number(lon) + 49.634) * 96.758105);
+        console.log(distance);
+        return distance;
     }
 })
