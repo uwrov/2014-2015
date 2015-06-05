@@ -81,7 +81,7 @@ def load_image(name):
         print "Cannot load image:", path
         raise SystemExit, message
     return image
-		
+        
 def joy_init():
     """Initializes pygame and the joystick, and returns the joystick to be
     used."""
@@ -269,7 +269,7 @@ def keepValuesAtZero():
     if (abs(rotation) < THRESHOLD):
         rotation = 0
   
-			
+            
 def main():
     global joystick, x, y, z, speed, rotation, x_offset, y_offset, z_offset, font, screen
     global SCREEN_SIZE
@@ -279,10 +279,10 @@ def main():
     
     
     clock = pg.time.Clock()
-	
+    
     done = False
     emergency = False
-	camView = 1
+    camView = 1
 
     while not done:
         for event in pg.event.get():
@@ -313,7 +313,7 @@ def main():
                     z_offset += ADJUSTMENT
 
             if event.type == pg.QUIT:
-				done = True
+                done = True
         
         """
         if (joystick.get_button(BACK_BUTTON) == True and joystick.get_button(START_BUTTON) == True):

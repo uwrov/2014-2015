@@ -87,7 +87,7 @@ def setup(serialPort):
 
     IMAGE_SIZE['width'] = max(cam1.get(cv.CV_CAP_PROP_FRAME_WIDTH), cam2.get(cv.CV_CAP_PROP_FRAME_WIDTH))
     IMAGE_SIZE['height'] = max(cam1.get(cv.CV_CAP_PROP_FRAME_HEIGHT), cam2.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
-    image = numpy.zeros((realWidth, realHeight * 2)), numpy.uint8)
+    image = numpy.zeros((realWidth, realHeight * 2), numpy.uint8)
 
     sleep(CONNECT_DELAY)
     
