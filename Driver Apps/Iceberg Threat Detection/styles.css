@@ -4,3 +4,7 @@ body {
 .col-xs-1 {
 	text-align: left;
 }
+
+#map {
+    width: 300px;
+}

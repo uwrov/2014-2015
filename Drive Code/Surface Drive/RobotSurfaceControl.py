@@ -1,8 +1,5 @@
-import math
-import numpy
-import cv2
+import cv2, glob, math, numpy, serial, sys
 import cv2.cv as cv
-from serial import Serial
 from time import clock, sleep
 from thread import start_new_thread
 
@@ -24,7 +21,7 @@ pingTime = -1
 pingStartTime = 0
 
 WAIT_TIME = 0.1
-CONNECT_DELAY = 5
+CONNECT_DELAY = 4
 
 # Sensor values received from Arduino
 sensor1Name = 0
@@ -42,10 +39,13 @@ SCALE = 127
 # Image
 cam1 = None
 cam2 = None
-# [width, height]
-#IMAGE_SIZE = [1024, 576]
-IMAGE_SIZE = {'width':300, 'height':200}
+
+#DESIRED_IMAGE_SIZE = {'width':300, 'height':200}
+DESIRED_IMAGE_SIZE = {'width':640, 'height':480}
+IMAGE_SIZE = {'width':640, 'height':480}
 image = None
+
+
 
 # THE BOT
 #
@@ -59,49 +59,84 @@ image = None
 #  4 \     / 3
 
 
-# Set up serial communication and cameras, and start data reading thread
-# Run this once program begins
-# Returns 1 if an error occurred during serial connection 
-# Returns 2 if an error occurred during camera connection
-# Returns 0 otherwise
-def setup(serialPort):
+# Set up serial communication and start data reading thread
+# Returns 0 if an error occurred during serial connection 
+# Returns 1 otherwise
+def arduinoSetup(serialPort):
     global ser
+
+    try:
+        ser = serial.Serial(serialPort)
+    except (OSError, serial.SerialException):
+        print "arduinoSetup: Serial '" + str(serialPort) + "' did not connect"
+        return 0
+    
+    start_new_thread(__updateData__, ())
+    return 1
+
+
+# attempts to connect to the optionally specified cameras
+# returns the number of cameras found
+def cameraSetup(p1=1, p2=2):
     global cam1, cam2
     global image
 
-    ser = Serial(serialPort)
-    if ser == None:
-        print "setup: Serial " + str(serialPort) + " did not connect"
+    try:
+        p1 = int(p1)
+    except (ValueError):
+        p1 = 1
+    try:
+        p2 = int(p2)
+    except (ValueError):
+        p2 = p1 + 1
+
+    cam1 = cv2.VideoCapture(p1)
+    cam2 = cv2.VideoCapture(p2)
+
+    cam1.grab()
+    _, testImg1 = cam1.retrieve()
+    cam2.grab()
+    _, testImg2 = cam2.retrieve()
+
+    if testImg1 == None and testImg2 == None:
+        print "cameraSetup: no cameras found"
+        return 0
+    elif testImg1 == None and not testImg2 == None:
+        cam1, cam2 = cam2, cam1
+        testImg1, testImg2 = testImg2, testImg1
+
+    cam1.set(cv.CV_CAP_PROP_FRAME_WIDTH, DESIRED_IMAGE_SIZE['width'])
+    cam1.set(cv.CV_CAP_PROP_FRAME_HEIGHT, DESIRED_IMAGE_SIZE['height'])
+    if not testImg2 == None:
+        cam2.set(cv.CV_CAP_PROP_FRAME_WIDTH, DESIRED_IMAGE_SIZE['width'])
+        cam2.set(cv.CV_CAP_PROP_FRAME_HEIGHT, DESIRED_IMAGE_SIZE['height'])
+
+    c1w = cam1.get(cv.CV_CAP_PROP_FRAME_WIDTH)
+    c1h = cam1.get(cv.CV_CAP_PROP_FRAME_HEIGHT)
+    if not testImg2 == None:
+        c2w = cam2.get(cv.CV_CAP_PROP_FRAME_WIDTH)
+        c2h = cam2.get(cv.CV_CAP_PROP_FRAME_HEIGHT)
+    else:
+        c2w = c2h = 0
+
+    IMAGE_SIZE['width'] = max(c1w, c2w)
+    IMAGE_SIZE['height'] = max(c1w, c2w)
+
+    image = numpy.zeros((IMAGE_SIZE['width'], IMAGE_SIZE['height'] * 2), numpy.uint8)
+
+    if testImg2 == None:
         return 1
-
-    cam1 = cv2.VideoCapture(0)
-    cam2 = cv2.VideoCapture(1)
-    if cam1 == None or cam2 == None:
-        print "setup: Camera did not connect"
+    else:
         return 2
-
-    cam1.set(cv.CV_CAP_PROP_FRAME_WIDTH, IMAGE_SIZE['width'])
-    cam1.set(cv.CV_CAP_PROP_FRAME_HEIGHT, IMAGE_SIZE['height'])
-    cam2.set(cv.CV_CAP_PROP_FRAME_WIDTH, IMAGE_SIZE['width'])
-    cam2.set(cv.CV_CAP_PROP_FRAME_HEIGHT, IMAGE_SIZE['height'])
-
-    IMAGE_SIZE['width'] = max(cam1.get(cv.CV_CAP_PROP_FRAME_WIDTH), cam2.get(cv.CV_CAP_PROP_FRAME_WIDTH))
-    IMAGE_SIZE['height'] = max(cam1.get(cv.CV_CAP_PROP_FRAME_HEIGHT), cam2.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
-    image = numpy.zeros((realWidth, realHeight * 2)), numpy.uint8)
-
-    sleep(CONNECT_DELAY)
-    
-    start_new_thread(__updateData__, ())
-    return 0
 
 
 # Updates the sensor data and ping time from the Arduino. Runs on
 # a separate thread after setup runs
 def __updateData__():
-    global motors
-    global sensors
-    global pingTime
-    global pingStartTime
+    global motors, sensors
+    global pingTime, pingStartTime
+    
+    sleep(CONNECT_DELAY) # damn servos
 
     while True:
         sleep(WAIT_TIME)
@@ -187,20 +222,28 @@ def getImage(imageType):
         cam1.grab()
         _, img1 = cam1.retrieve()
 
-        img1 = numpy.rot90(img1)
-        img1 = img1[::-1, :,]
-        img1[:,:,[0,2]] = img1[:,:,[2, 0]]
-
+        if not img1 == None:
+            # rotate image
+            img1 = numpy.rot90(img1)
+            # flip image
+            img1 = img1[::-1, :,]
+            # switch color channels because cv2 and pygame don't play nice together
+            img1[:,:,[0,2]] = img1[:,:,[2, 0]]
         return img1
+
     elif imageType == 2:
         cam2.grab()
         _, img2 = cam2.retrieve()
 
-        img2 = numpy.rot90(img2)
-        img2 = img2[::-1, :,]
-        img2[:,:,[0,2]] = img2[:,:,[2, 0]]
-
+        if not img2 == None:
+            # rotate image
+            img2 = numpy.rot90(img2)
+            # flip image
+            img2 = img2[::-1, :,]
+            # switch color channels because cv2 and pygame don't play nice together
+            img2[:,:,[0,2]] = img2[:,:,[2, 0]]
         return img2
+
     elif imageType == 3:
         cam1.grab()
         _, img1 = cam1.retrieve()
@@ -221,6 +264,7 @@ def getImage(imageType):
         image[0 : IMAGE_SIZE['width'], IMAGE_SIZE['height'] : IMAGE_SIZE['height'] * 2] = img2
 
         return image
+
     else:
         print "getImage: imageType " + str(imageType) + " is not a valid image type"
         return None
@@ -229,9 +273,12 @@ def getImage(imageType):
 # Release the cameras and serial being used
 # Run once program ends
 def close():
-    ser.close()
-    cam1.release()
-    # cam2.release()
+    if ser:
+        ser.close()
+    if cam1:
+        cam1.release()
+    if cam2:
+        cam2.release()
     cv2.destroyAllWindows()
 
 
