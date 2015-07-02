@@ -1,45 +1,75 @@
 <html>
 <head>
 	<title>Starfish Identification</title>
-	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-	<link href='http://fonts.googleapis.com/css?family=Press+Start+2P' rel='stylesheet' type='text/css'>
-	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<link rel="stylesheet" href="../libraries/bootstrap/css/bootstrap.min.css">
+	<script src="../libraries/jquery.min.js"></script>
 </head>
 <body>
-	<!-- <div class="row">
-		<div class="col-xs-6">This is on the left and centered... I hope</div>
-		<div class="col-xs-6">This is on the right and centered... I hope</div>
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-3 star">
+				<img src="pictures/Bat Star.png" title="Bat Star: Asterina Miniata">
+				<div><b>Bat Star: Asterina Miniata</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star">
+				<img src="pictures/Blood Star.png" title="Blood Star: Henricia Leviuscula">
+				<div><b>Blood Star: Henricia Leviuscula</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star">
+				<img src="pictures/Purple Ochre Star.png" title="Purple Ochre Star: Pisaster Ochraceus">
+				<div><b>Purple Ochre Star: Pisaster Ochraceus</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star">
+				<img src="pictures/Rainbow Star.png" title="Rainbow Star: Orthasterias Koehleri">
+				<div><b>Rainbow Star: Orthasterias Koehleri</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 star">
+				<img src="pictures/Gunpowder Star.png" title="Gunpowder Star: Gephyreaster Swifti">
+				<div><b>Gunpowder Star: Gephyreaster Swifti</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star">
+				<img src="pictures/Striped Sun Star.png" title="Striped Sun Star: Solaster stimpsoni">
+				<div><b>Striped Sun Star: Solaster stimpsoni</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star">
+				<img src="pictures/Mottled Star.png" title="Mottled Star: Evasterias troschelii">
+				<div><b>Mottled Star: Evasterias troschelii</b></div>
+				<div class="row">
+					<div class="col-sm-6">Number:</div>
+					<div class="col-sm-6"><input type="text" id="dia" class="form-control input-sm"></div>
+				</div>
+			</div>
+			<div class="col-sm-3 star"></div>
+		</div>
 	</div>
-	<div class="row">
-		<div class="col-xs-3">This is a picture: 
-			<img src="pictures/Bat Star.png" title="Bat Star: Asterina Miniata" style="width:150px;height:150px"></div>
-		<div class="col-xs-3">This is a picture: 
-			<img src="pictures/Blood Star.png" title="Blood Star: Henricia Leviuscula" style="width:150px;height:150px"></div>
-		<div class="col-xs-3">This is a picture: 
-			<img src="pictures/Purple Ochre Star.png" title="Purple Ochre Star: Pisaster Ochraceus" style="width:150px;height:150px"></div>
-		<div class="col-xs-3">This is a picture: 
-			<img src="pictures/Rainbow Star.png" title="Rainbow Star: Orthasterias Koehleri" style="width:150px;height:150px"></div>
-	</div>
-	<div class="row">Is this below the pictures?</div>
-	<div class="row">It is below the pictures!</div>
-	<div class="row">So what does this do...</div> -->
-	<table border ="1">
-		<tr>
-			<th>  </th>
-			<th>Picture</th>
-			<td>
-				<div class="col-xs-3"><img src="pictures/Bat Star.png" title="Bat Star: Asterina Miniata" style="width:125px;height:125px"></div>
-			</td>
-			<td>
-				<div class="col-xs-3"><img src="pictures/Blood Star.png" title="Blood Star: Henricia Leviuscula" style="width:125px;height:125px"></div>
-			</td>
-			<td>
-				<div class="col-xs-3">
-					<img src="pictures/Purple Ochre Star.png" title="Purple Ochre Star: Pisaster Ochraceus" style="width:125px;height:125px"></div>
-			</td>
-			<td>
-				<div class="col-xs-3"><img src="pictures/Rainbow Star.png" title="Rainbow Star: Orthasterias Koehleri" style="width:125px;height:125px"></div>
-			</td>
+			<!-- 
 			<td>
 				<div class="col-xs-3"><img src="pictures/Gunpowder Star.png" title="Gunpowder Star: Gephyreaster Swifti" style="width:125px;height:125px"></div>
 			</td>
@@ -111,7 +141,7 @@
   				<input type="submit" onclick="updateCountStriped()" id="submit7">
 			</td>
 		</tr>
-	</table>
+	</table> -->
 	<script type="text/javascript">
 		function updateCountBat() {
 			var x = document.getElementById("input1").value;

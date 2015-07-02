@@ -1,92 +1,115 @@
-var app = angular.module('app', []);
+function debug (s) {
+    $("#debug").append(s + "<br>");
+}
 
-app.controller('ctrl', function($scope) {
-    $scope.dia = 0;
-    $scope.dep = 0;
-    $scope.keel = 0;
-    $scope.lat = 0;
-    $scope.lon = 0;
-    $scope.head = 0;
+GREEN = 0;
+YELLOW = 1;
+RED = 2;
 
-    $scope.vol = function() {
-        if ($scope.dia != 0 && $scope.dep != 0) {
-            var vol = Math.PI * Math.pow($scope.dia / 2, 2) * ($scope.dep / 3);
-            return vol.toFixed(1);
-        } else {
-            return "Unknown";
-        }
+locs = {"hibernia":  {"lat": 46.7504, "lon": 48.7819, "depth": 78 },
+        "searose":   {"lat": 46.7895, "lon": 48.1417, "depth": 107},
+        "terranova": {"lat": 46.4000, "lon": 48.4000, "depth": 91 },
+        "hebron":    {"lat": 46.5440, "lon": 48.4980, "depth": 93 }};
+
+
+function getVolume(dia, height) {
+    return 1/3 * Math.PI * Math.pow(dia / 2, 2) * height;
+}
+
+
+function updateVolume(dia, height) {
+    var dia = $("#dia").val();
+    var height = $("#height").val();
+
+    if (isNaN(dia) || isNaN(height) || dia == "" || height == "") return;
+
+    var volume = getVolume(dia, height).toFixed(2);
+
+    $("#volume").html(volume + " cm<sup>3</sup>");
+}
+
+
+
+// distance between two points in nautical miles
+function getDist(lat1, lon1, lat2, lon2) {
+    var latNM = (lat2 - lat1) * 60;
+    var lonNM = (lon2 - lon1) * 41.45;
+    return Math.sqrt(latNM * latNM + lonNM * lonNM);
+}
+
+// heading is degrees clockwise from north
+function closestApproach(latIce, lonIce, latBase, lonBase, heading) {
+    var relLat = (latBase - latIce) * 60;
+    var relLon = -(lonBase - lonIce) * 41.45;
+    var radHeading = heading * Math.PI / 180;
+
+    var closestX = Math.cos(radHeading) * relLon - Math.sin(radHeading) * relLat;
+    var closestY = Math.sin(radHeading) * relLon + Math.cos(radHeading) * relLat;
+
+    if (closestY >= 0) {
+        return Math.abs(closestX);
+    }
+    return getDist(latIce, lonIce, latBase, lonBase);
+}
+
+function setThreatLevel(id, level) {
+    if (level == 0) {
+        $("#" + id).html("<span style='font-weight:bold; color:green'>GREEN</span>");
+    } else if (level == 1) {
+        $("#" + id).html("<span style='font-weight:bold; color:rgb(220,220,0)'>YELLOW</span>");
+    } else if (level == 2) {
+        $("#" + id).html("<span style='font-weight:bold; color:red'>RED</span>");
+    } else {
+        $("#" + id).html("UNKNOWN");
+    }
+}
+
+function updateThreat(name, latIce, lonIce, depthIce, heading) {
+    var latBase = locs[name].lat;
+    var lonBase = locs[name].lon;
+    var depthBase = locs[name].depth;
+
+    closest = closestApproach(latIce, lonIce, latBase, lonBase, heading);
+
+    if (closest > 10 || depthIce >= 1.1 * depthBase) {
+        setThreatLevel(name + "_sur", 0);
+    } else if (closest > 5) {
+        setThreatLevel(name + "_sur", 1);
+    } else {
+        setThreatLevel(name + "_sur", 2);
     }
 
-    function surface(depth) {
-        if ($scope.keel != 0 && $scope.lat != 0 && $scope.lon != 0) {
-            if ($scope.keel <= depth * 1.1) {
-                return "Green";
-            } else {
-                return "Red";
-            }
-        } else {
-            return "Unknown";
-        }
+    if (depthIce >= 1.1 * depthBase || depthIce < .7 * depthBase) {
+        setThreatLevel(name + "_sub", 0);
+    } else if (depthIce >= .7 * depthBase && depthIce <= .9 * depthBase) {
+        setThreatLevel(name + "_sub", 1);
+    } else {
+        setThreatLevel(name + "_sub", 2);
     }
+}
 
-    function subsea(depth) {
-        if ($scope.keel != 0 && $scope.lat != 0 && $scope.lon != 0) {
-            if ($scope.keel <= depth * 1.1 || $scope.keel > depth * 0.7) {
-                return "Green";
-            } else if ($scope.keel > depth * 0.9 && $scope.keel <= depth * 0.7) {
-                return "Yellow";
-            } else {
-                return "Red";
-            }
-        } else {
-            return "Unknown";
-        }
-    }
+function updateThreats() {
+    var depth = Math.abs($("#depth").val());
+    var lat = $("#lat").val();
+    var lon = Math.abs($("#lon").val());
+    var heading = $("#heading").val();
 
-    $scope.hibsur = function() { return surface(-78); }
+    if (isNaN(depth) || isNaN(lat) || isNaN(lon) || isNaN(heading) ||
+        depth == "" || lat == "" || lon == "" || heading == "") return;
 
-    $scope.hibsub = function() { return subsea(-78); }
+    updateThreat("hibernia", lat, lon, depth, heading);
+    updateThreat("searose", lat, lon, depth, heading);
+    updateThreat("terranova", lat, lon, depth, heading);
+    updateThreat("hebron", lat, lon, depth, heading);
+}
 
-    $scope.seasur = function() { return surface(-107); }
 
-    $scope.seasub = function() { return subsea(-107); }
+$(function() {
+    $("#dia").change(updateVolume);
+    $("#height").change(updateVolume);
 
-    $scope.tersur = function() { return surface(-91); }
-
-    $scope.tersub = function() { return subsea(-91); }
-
-    $scope.hebsur = function() { return surface(-93); }
-
-    $scope.hebsub = function() { return subsea(-93); }
-});
-
-$(document).ready(function(){
-    var c = document.getElementById("image");
-    var ctx = c.getContext("2d");
-    var img = document.getElementById("map");
-    ctx.drawImage(img, 0, 0);
-
-    $("#image").click(function(){
-        ctx.clearRect(0, 0, this.width, this.height);
-        ctx.drawImage(img, 0, 0);
-        ctx.fillStyle = 'red';
-        ctx.fillRect(getLongitude() - 1, getLatitude() - 1, 3, 3);
-    })
-
-    function getLatitude() {
-        //return $("#latitude").val();
-        var lat = $("#latitude").val();
-        var distance = Math.round(Math.abs(Number(lat) - 48.09) * 142.936288);
-        console.log(distance);
-        return distance;
-    }
-
-    function getLongitude() {
-        //return $("#longitude").val();
-        var lon = $("#longitude").val();
-        console.log(lon);
-        var distance = Math.round(Math.abs(Number(lon) + 49.634) * 96.758105);
-        console.log(distance);
-        return distance;
-    }
-})
+    $("#depth").change(updateThreats);
+    $("#lat").change(updateThreats);
+    $("#lon").change(updateThreats);
+    $("#heading").change(updateThreats);
+}); 

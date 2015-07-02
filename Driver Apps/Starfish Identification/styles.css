@@ -1,3 +1,8 @@
 body {
 	text-align: center;
 }
+
+.star {
+    height: 45%;
+    padding-left: 10px;
+}

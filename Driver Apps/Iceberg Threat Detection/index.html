@@ -1,4 +1,5 @@
 <html>
+
 <head>
 	<title>Iceberg Threat Detection</title>
 	<link rel="stylesheet" type="text/css" href="styles.css">
@@ -7,108 +8,104 @@
 	<script src="../libraries/angular.min.js"></script>
 	<script src="app.js"></script>
 </head>
-<body ng-app="app" ng-controller="ctrl">
-	<div class="row">
-		<h2>Iceberg Volume Calculation</h2>
-	</div>
-	<div class="row">
-		<div class="col-xs-2">
-			Iceberg Diameter (cm):
+
+<body>
+	<div class="container">
+		<div class="row">
+			<h2>Iceberg Volume Calculation</h2>
 		</div>
-		<div class="col-xs-2">
-			<input type="text" class="form-control input-sm" ng-model="dia">
+		<div class="row">
+			<div class="col-xs-2 i-label">
+				Iceberg Diameter (cm):
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="dia" class="form-control input-sm">
+			</div>
+			<div class="col-xs-1"></div>
+			<div class="col-xs-2 i-label">
+				Iceberg Keel Depth (cm):
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="height" class="form-control input-sm">
+			</div>
+			<div class="col-xs-1"></div>
+			<div class="col-xs-2 i-label">
+				Iceberg Volume:
+			</div>
+			<div id="volume" class="col-xs-2" style="text-align:left"></div>
 		</div>
-		<div class="col-xs-2">
-			Iceberg Keel Depth (cm):
+		<p></p>
+		<div class="row">
+			<h2>Iceberg Threat Identification</h2>
 		</div>
-		<div class="col-xs-2">
-			<input type="text" class="form-control input-sm" ng-model="dep">
+		<div class="row">
+			<img id="map" src="Images/Map.png">
+			<div id="debug"></div>
 		</div>
-		<div class="col-xs-4">
-			Iceberg Volume: {{vol()}} cm^3
+		<p></p>
+		<div class="row">
+			<div class="col-xs-2 i-label">
+				Keel Depth (m):
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="depth" class="form-control input-sm">
+			</div>
+			<div class="col-xs-2 i-label">
+				Latitude:
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="lat" class="form-control input-sm">
+			</div>
+			<div class="col-xs-2 i-label">
+				Longitude:
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="lon" class="form-control input-sm">
+			</div>
+			<div class="col-xs-2 i-label">
+				Heading (&#176; CW from N):
+			</div>
+			<div class="col-xs-1">
+				<input type="text" id="heading" class="form-control input-sm">
+			</div>
 		</div>
-	</div>
-	<p></p>
-	<div class="row">
-		<h2>Iceberg Threat Identification</h2>
-	</div>
-	<div class="row">
-		<canvas id="image" width="194px" height="258px"></canvas>
-		<img id="map" src="Images/Map.png">
-	</div>
-	<p></p>
-	<div class="row">
-		<div class="col-xs-1"></div>
-		<div class="col-xs-1">
-			Real Keel Depth:
+		<div class="row">
+			<h4>Threat Levels:</h4>
 		</div>
-		<div class="col-xs-1">
-			<input type="text" class="form-control input-sm" ng-model="keel">
-		</div>
-		<div class="col-xs-1">
-			cm
-		</div>
-		<div class="col-xs-1">
-			Coordinates:
-		</div>
-		<div class="col-xs-1">
-			<input type="text" id="latitude" class="form-control input-sm" ng-model="lat">
-		</div>
-		<div class="col-xs-1">
-			deg lat,
-		</div>
-		<div class="col-xs-1">
-			<input type="text" id="longitude" class="form-control input-sm" ng-model="lon">
-		</div>
-		<div class="col-xs-1">
-			deg long
-		</div>
-		<div class="col-xs-1">
-			Heading (CW from N):
-		</div>
-		<div class="col-xs-1">
-			<input type="text" id="heading" class="form-control input-sm" ng-model="head">
-		</div>
-		<div class="col-xs-1">
-			deg
-		</div>
-	</div>
-	<div class="row">
-		<h4>Threat Levels:</h4>
-	</div>
-	<div class="row">
-		<div class="col-xs-12">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Asset</th>
-						<th>Surface</th>
-						<th>Subsea</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td>Hibernia</td>
-						<td id="hibsur">{{hibsur()}}</td>
-						<td id="hibsub">{{hibsub()}}</td>
-					</tr>
-					<tr>
-						<td>Sea Rose</td>
-						<td id="seasur">{{seasur()}}</td>
-						<td id="seasub">{{seasub()}}</td>
-					</tr>
-					<tr>
-						<td>Terra Nova</td>
-						<td id="tersur">{{tersur()}}</td>
-						<td id="tersub">{{tersub()}}</td>
-					</tr>
-					<tr>
-						<td>Hebron</td>
-						<td id="hebsur">{{hebsur()}}</td>
-						<td id="hebsub">{{hebsub()}}</td>
-					</tr>
-				</tbody>
-			</table>
+		<div class="row">
+			<div class="col-xs-12">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Asset</th>
+							<th>Surface</th>
+							<th>Subsea</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Hibernia</td>
+							<td id="hibernia_sur"></td>
+							<td id="hibernia_sub"></td>
+						</tr>
+						<tr>
+							<td>Sea Rose</td>
+							<td id="searose_sur"></td>
+							<td id="searose_sub"></td>
+						</tr>
+						<tr>
+							<td>Terra Nova</td>
+							<td id="terranova_sur"></td>
+							<td id="terranova_sub"></td>
+						</tr>
+						<tr>
+							<td>Hebron</td>
+							<td id="hebron_sur"></td>
+							<td id="hebron_sub"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 		</div>
 	</div>
 </body>

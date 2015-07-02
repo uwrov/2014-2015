@@ -1,4 +1,4 @@
-import math, os, sys
+import cv2, math, os, sys
 sys.path.insert(0, '../Surface Drive')
 sys.path.insert(0, '../libraries')
 
@@ -350,6 +350,8 @@ def main():
     done = False
     emergency = False
     camView = 1
+    saveNextImage = False
+    imageNum = 0
 
     while not done:
 
@@ -363,28 +365,33 @@ def main():
                     joystick = joyInit()
                 elif hasSignal == 0 and arduinoConnectButton.collidepoint(event.pos): # click the arduino connect
                     hasSignal = rc.arduinoSetup(port_input.get_text())
-                    if not hasSignal == 0:
+                    if hasSignal != 0:
                         port_input.lock()
                 elif cameraConnectButton.collidepoint(event.pos): # click the camera connect
                     numCams = rc.cameraSetup(cam1_input.get_text(), cam2_input.get_text())
-            if event.type == pg.VIDEORESIZE:
+            elif event.type == pg.VIDEORESIZE:
                 DISPLAY_SIZE = getEffectiveSize(event.size)
                 SCREEN_SIZE = event.size
                 screen = pg.display.set_mode(SCREEN_SIZE, pg.RESIZABLE)
                 font = pg.font.SysFont("encodesansnormalblack",  DISPLAY_SIZE[0] / 50)
                 font_small = pg.font.SysFont(None, DISPLAY_SIZE[0] / 50)
-            if not joyConnected == 0:
+            elif joyConnected != 0:
                 if event.type == pg.JOYBUTTONDOWN:
                     if event.dict['button'] == X_BUTTON:
                         camView = 3 - camView
-                    if event.dict['button'] == B_BUTTON:
+                    elif event.dict['button'] == B_BUTTON:
                         print "B pressed"
-                    if event.dict['button'] == Y_BUTTON:
+                    elif event.dict['button'] == Y_BUTTON:
                         z_offset += ADJUSTMENT
                         z_offset = keepInRange(z_offset, -1, 1)
-                    if event.dict['button'] == A_BUTTON:
+                    elif event.dict['button'] == A_BUTTON:
                         z_offset -= ADJUSTMENT
                         z_offset = keepInRange(z_offset, -1, 1)
+                    elif event.dict['button'] == START_BUTTON:
+                        saveNextImage = True
+            elif event.type == KEYDOWN:
+                if event.key == K_SPACE:
+                    saveNextImage = True
 
             if event.type == pg.QUIT:
                 done = True
@@ -400,7 +407,7 @@ def main():
 
 
 
-        if not joyConnected == 0:
+        if joyConnected != 0:
             updateValues()
         rc.setMotors(x, y, z, rotation) 
 
@@ -422,14 +429,24 @@ def main():
         cam2_input.draw(screen)
 
         
-        if not numCams == 0:
+        if numCams != 0:
             frame = rc.getImage(camView)
 
             if frame == None:
                 displayNoSignal(screen)
             else:
                 frame = pg.surfarray.make_surface(frame)
-                screen = blitCamFrame(frame,screen)
+                screen = blitCamFrame(frame, screen)
+
+                if saveNextImage:
+                    out = pg.surfarray.array3d(frame)
+                    out = numpy.rot90(out)
+                    out = out[::-1, :,]
+                    out[:,:,[0,2]] = out[:,:,[2, 0]]
+                    while os.path.isfile(os.path.join("..", "..", "screenshots", str(imageNum) + ".png")):
+                        imageNum += 1
+                    cv2.imwrite(os.path.join("..", "..", "screenshots", str(imageNum) + ".png"), out)
+                    saveNextImage = False
         else:
             displayNoSignal(screen)
 
